@@ -59,7 +59,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .btn-export:hover{background:rgba(91,200,175,.15);}
 /* keys — cool white/slate, distinct from all agents */
 /* keys button removed — now lives inside agents panel */
-/* discuss inline in route bar + clear in thread */
 .btn-discuss-inline{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:#ff7a2f;background:rgba(255,122,47,.08);border:1px solid rgba(255,122,47,.3);padding:3px 8px;border-radius:1px;cursor:pointer;transition:all .15s;height:22px;display:flex;align-items:center;margin-left:auto;}
 .btn-discuss-inline:hover{background:rgba(255,122,47,.18);}
 .btn-discuss-inline:disabled{opacity:.28;cursor:not-allowed;}
@@ -120,6 +119,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .msg-main:hover .msg-actions{display:flex;}
 .btn-retry{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--bg3);border:1px solid var(--line2);padding:2px 7px;border-radius:1px;cursor:pointer;transition:all .12s;letter-spacing:.03em;}
 .btn-retry:hover{color:var(--text);border-color:var(--dim2);}
+.btn-quote{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--bg3);border:1px solid var(--line2);padding:2px 7px;border-radius:1px;cursor:pointer;transition:all .12s;letter-spacing:.03em;}
+.btn-quote:hover{color:var(--a-hue);border-color:var(--a-rim);}
+/* Quote block rendered in msg-body */
+.msg-body blockquote.agent-quote{border-left:2px solid var(--a-rim);margin:0 0 10px;padding:5px 10px;background:rgba(232,197,71,.04);border-radius:0 2px 2px 0;}
+.msg-body blockquote.agent-quote .quote-from{font-size:10px;font-family:var(--mono);color:var(--a-hue);margin-bottom:3px;font-weight:600;}
+.msg-body blockquote.agent-quote .quote-text{font-size:12px;color:#aaa;font-style:italic;}
 
 .msg-body{font-size:13px;line-height:1.75;color:var(--text);word-break:break-word;font-family:var(--sans);font-weight:300;}
 .msg-body p{margin:0 0 10px;}
@@ -528,8 +533,8 @@ const state={
   busy:{a:false,b:false,c:false,d:false},
   routes:{a:true,b:true,c:true,d:true},
   totalCost:0,
-  filterAgent:null,  // null = no filter, 'a'|'b'|'c'|'d' = filtering
-  attachments:[],    // [{type:'image'|'text',name,content,dataUrl?}]
+  filterAgent:null,
+  attachments:[],
 };
 
 const PRICES={'claude-opus-4-6':{i:15,o:75},'claude-sonnet-4-6':{i:3,o:15},'gpt-5.4':{i:2.5,o:15},'gpt-5.4-mini':{i:0.75,o:4.5},'o3':{i:2,o:8},'o4-mini':{i:1.1,o:4.4},'gpt-4o':{i:2.5,o:10},'codex-mini-latest':{i:1.5,o:6}};
@@ -701,17 +706,31 @@ async function doSend(){
   document.getElementById('send-btn').disabled=true;
   document.getElementById('btn-discuss').disabled=true;
 
-  const calls=Object.entries(targets).filter(([,v])=>v).map(([id])=>callAgent(id,text,false,attachSnap));
-  if(!calls.length){addSysMsg('No agents selected.');return;}
-  await Promise.all(calls);
+  const agentIds=Object.entries(targets).filter(([,v])=>v).map(([id])=>id);
+  if(!agentIds.length){addSysMsg('No agents selected.');return;}
+  await Promise.all(agentIds.map(id=>callAgent(id,text,false,attachSnap)));
   if(targets.a&&targets.d)showDiscussTrigger();
   document.getElementById('btn-discuss').disabled=!(targets.a&&targets.d);
   persistState();
-  // Refresh filter if active
   if(state.filterAgent) refreshFilter();
 }
 
-// ── RETRY ─────────────────────────────────────────
+// ── QUOTE REPLY ───────────────────────────────────
+function quoteReply(id){
+  const agent=cfg.agents[id];
+  const msgs=state.history[id].filter(m=>m.role==='assistant');
+  const last=msgs.at(-1);
+  if(!last) return;
+  const text=typeof last.content==='string'?last.content:(last.content?.[0]?.text||'');
+  const snippet=text.trim().slice(0,200).replace(/\n+/g,' ')+(text.length>200?'…':'');
+  const inp=document.getElementById('inp');
+  const prefix=`> @${agent.label}: "${snippet}"\n\n`;
+  inp.value=inp.value?inp.value+'\n'+prefix:prefix;
+  inp.focus();
+  inp.selectionStart=inp.selectionEnd=inp.value.length;
+  onInput(inp);
+}
+
 async function retryAgent(id,userText){
   if(state.busy[id])return;
   // Remove last assistant message for this agent from history
@@ -821,16 +840,84 @@ function buildUserContentWithAttach(text,attachments,provider){
 async function triggerDiscuss(){
   if(isBusy())return;
   document.getElementById('btn-discuss').disabled=true;
+
   const bLast=state.history.a.filter(m=>m.role==='assistant').at(-1)?.content;
   const tLast=state.history.d.filter(m=>m.role==='assistant').at(-1)?.content;
-  if(!bLast||!tLast){addSysMsg('Need responses from both @brain and @thinkererer first.');return;}
-  addSysMsg('⟳ discussion round — @brain and @thinkerer responding to each other');
-  const bPrompt=`@thinker said:\n\n"${typeof tLast==='string'?tLast:JSON.stringify(tLast)}"\n\nRespond directly. Where do you agree or diverge? Be specific.`;
-  const tPrompt=`@brain said:\n\n"${typeof bLast==='string'?bLast:JSON.stringify(bLast)}"\n\nRespond directly. Where do you agree or diverge? Be specific.`;
-  await Promise.all([callAgent('a',bPrompt,true),callAgent('d',tPrompt,true)]);
+  if(!bLast||!tLast){addSysMsg('Need responses from both @brain and @thinker first.');return;}
+
+  addSysMsg('⟳ discussion round — @brain and @thinker responding to each other');
+
+  const bText=typeof bLast==='string'?bLast:(bLast?.[0]?.text||'');
+  const tText=typeof tLast==='string'?tLast:(tLast?.[0]?.text||'');
+
+  // Run in parallel — each gets peer content injected only into the API payload,
+  // not stored in history (so thread stays clean and histories don't diverge)
+  await Promise.all([
+    discussCall('a', tText, 'Another AI assistant (GPT-5.4) just responded to the same question with the following analysis. Engage with their reasoning directly — where do you agree, where do you push back, and why?'),
+    discussCall('d', bText, 'Another AI assistant (Claude Opus) just responded to the same question with the following analysis. Engage with their reasoning directly — where do you agree, where do you push back, and why?'),
+  ]);
+
   document.getElementById('btn-discuss').disabled=false;
   persistState();
   if(state.filterAgent)refreshFilter();
+}
+
+// Discuss-specific API call: injects peer content into payload only, does NOT pollute history
+async function discussCall(id, peerText, framePrompt){
+  const agent=cfg.agents[id];
+  state.busy[id]=true;setBusy(id,true);
+  const bodyEl=addAgentMsg(id,true);
+
+  // Build messages: use existing history + a fresh user turn with peer content
+  // The peer content is NOT saved to state.history — it's one-shot
+  const peerMsg={
+    role:'user',
+    content:`${framePrompt}\n\n---\n${peerText}\n---\n\nNow respond directly to this.`
+  };
+  const messages=[...state.history[id], peerMsg];
+
+  try{
+    let reply='',inT=0,outT=0;
+    if(agent.provider==='anthropic'){
+      const ak=cleanKey(cfg.anthropicKey);
+      if(!ak)throw new Error('Anthropic API key not set');
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages})
+      });
+      if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
+      const data=await res.json();
+      reply=data.content?.[0]?.text||'';inT=data.usage?.input_tokens||0;outT=data.usage?.output_tokens||0;
+    } else {
+      const ok=cleanKey(cfg.openaiKey);
+      if(!ok)throw new Error('OpenAI API key not set');
+      const msgs=[{role:'system',content:agent.system},...messages];
+      let res;
+      try{
+        res=await fetch('https://tpo-proxy.rainineyeweb3.workers.dev/v1/chat/completions',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${ok}`},
+          body:JSON.stringify({model:agent.model,max_completion_tokens:1024,messages:msgs})
+        });
+      }catch(e){throw new Error('OpenAI proxy unreachable');}
+      if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
+      const data=await res.json();
+      reply=data.choices?.[0]?.message?.content||'';inT=data.usage?.prompt_tokens||0;outT=data.usage?.completion_tokens||0;
+    }
+
+    const cost=costEst(agent.model,inT,outT);
+    state.totalCost+=cost;updateCost();
+
+    // Save the discuss reply to history as assistant turn (peer prompt stays out)
+    state.history[id].push({role:'assistant',content:reply});
+    bodyEl.innerHTML=fmtBody(reply);
+    logAppend(id,agent.label,agent.model,reply);
+    if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
+  } catch(err){
+    bodyEl.innerHTML=`<span style="color:#e05555;font-family:var(--mono);font-size:11px">error: ${esc(err.message)}</span>`;
+  }
+  state.busy[id]=false;setBusy(id,false);scrollBot();
 }
 
 function showDiscussTrigger(){
@@ -897,7 +984,7 @@ function injectRetryBtn(row,id){
   const userText=typeof lastUserMsg?.content==='string'?lastUserMsg.content:(lastUserMsg?.content?.[0]?.text||'');
   const actions=row.querySelector('.msg-actions');
   if(actions&&userText){
-    actions.innerHTML=`<button class="btn-retry" onclick="retryAgent('${id}',${JSON.stringify(userText)})">↺ retry</button>`;
+    actions.innerHTML=`<button class="btn-quote" onclick="quoteReply('${id}')">❝ quote</button><button class="btn-retry" onclick="retryAgent('${id}',${JSON.stringify(userText)})">↺ retry</button>`;
   }
 }
 
