@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080808">
 <title>Tiny Product Office</title>
 <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
 <style>
@@ -18,11 +22,13 @@
   --user-hue:#777;--sys-hue:#3a3a3a;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;}
-.shell{display:grid;grid-template-rows:46px 1fr 1px auto;height:100vh;}
+/* Prevent any horizontal overflow globally */
+*{max-width:100%;}
+.shell{display:grid;grid-template-rows:46px 1fr 1px auto;height:100vh;height:100dvh;overflow:hidden;}
 
 /* ── TOPBAR ─────────────────────────────── */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--line2);background:var(--bg2);z-index:10;gap:10px;}
-.topbar-left{display:flex;align-items:center;gap:8px;min-width:0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--line2);background:var(--bg2);z-index:10;gap:6px;overflow:hidden;}
+.topbar-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden;}
 
 /* Penguin strip — horizontal row, overlapping */
 .pcluster{display:flex;align-items:center;flex-shrink:0;}
@@ -46,7 +52,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .live-dot.on{opacity:1;animation:blink 1.3s ease infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
 
-.session-title{font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--text);white-space:nowrap;}
+.session-title{font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
 
 .topbar-right{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .btn-bar{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--dim);background:none;border:1px solid var(--line2);padding:4px 8px;border-radius:2px;cursor:pointer;transition:all .15s;white-space:nowrap;line-height:1.4;}
@@ -59,10 +65,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .btn-export:hover{background:rgba(91,200,175,.15);}
 /* keys — cool white/slate, distinct from all agents */
 /* keys button removed — now lives inside agents panel */
-.btn-discuss-inline{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:#ff7a2f;background:rgba(255,122,47,.08);border:1px solid rgba(255,122,47,.3);padding:3px 8px;border-radius:1px;cursor:pointer;transition:all .15s;height:22px;display:flex;align-items:center;margin-left:auto;}
+.btn-discuss-inline{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:#ff7a2f;background:rgba(255,122,47,.08);border:1px solid rgba(255,122,47,.3);padding:3px 8px;border-radius:1px;cursor:pointer;transition:all .15s;height:22px;display:flex;align-items:center;margin-left:auto;flex-shrink:0;white-space:nowrap;}
 .btn-discuss-inline:hover{background:rgba(255,122,47,.18);}
 .btn-discuss-inline:disabled{opacity:.28;cursor:not-allowed;}
-.btn-clear-thread{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--dim2);background:none;border:1px solid var(--line2);padding:3px 8px;border-radius:1px;cursor:pointer;transition:all .15s;height:22px;display:flex;align-items:center;}
+.btn-clear-thread{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--dim2);background:none;border:1px solid var(--line2);padding:3px 8px;border-radius:1px;cursor:pointer;transition:all .15s;height:22px;display:flex;align-items:center;flex-shrink:0;white-space:nowrap;}
 .btn-clear-thread:hover{color:var(--dim);border-color:var(--dim2);}
 .session-cost{font-size:10px;color:#aaaaaa;letter-spacing:.04em;white-space:nowrap;}
 
@@ -82,10 +88,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 
 /* Empty — two flush rows */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:0;padding:60px 40px;}
-.empty-agents{display:flex;border:1px solid var(--line2);border-bottom:none;border-radius:3px 3px 0 0;overflow:hidden;max-width:600px;width:100%;}
+.empty-agents{display:flex;border:1px solid var(--line2);border-bottom:none;border-radius:3px 3px 0 0;overflow:hidden;width:min(570px,100%);}
 .ea{flex:1;padding:13px 12px;background:rgba(8,8,8,.88);border-right:1px solid var(--line2);display:flex;flex-direction:column;gap:6px;min-width:0;}
 .ea:last-child{border-right:none;}
-.empty-hint{font-size:11px;color:var(--dim);line-height:1.85;border:1px solid var(--line2);padding:9px 14px;border-radius:0 0 3px 3px;background:rgba(8,8,8,.7);letter-spacing:.02em;max-width:600px;width:100%;text-align:center;}
+.empty-hint{font-size:11px;color:var(--dim);line-height:1.85;border:1px solid var(--line2);padding:9px 14px;border-radius:0 0 3px 3px;background:rgba(8,8,8,.7);letter-spacing:.02em;width:min(570px,100%);text-align:center;}
 .empty-hint span{color:var(--text);font-weight:500;}
 .ea-hd{display:flex;align-items:center;gap:6px;}
 .ea-tag{font-size:12px;font-weight:600;letter-spacing:.06em;}
@@ -93,7 +99,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .ea-desc{font-size:11px;color:var(--dim);line-height:1.5;font-family:var(--sans);font-weight:300;}
 
 /* Messages */
-.msg{display:grid;grid-template-columns:50px 1fr;border-bottom:1px solid var(--line);animation:fi .16s ease;background:rgba(8,8,8,.55);transition:opacity .2s;}
+.msg{display:grid;grid-template-columns:50px minmax(0,1fr);border-bottom:1px solid var(--line);animation:fi .16s ease;background:rgba(8,8,8,.55);transition:opacity .2s;}
 .msg.disc{background:rgba(15,11,6,.7);}
 @keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .msg-gutter{padding:13px 0 13px 13px;display:flex;align-items:flex-start;border-right:1px solid var(--line);}
@@ -105,7 +111,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .av-d{background:var(--d-glow);border:1px solid var(--d-rim);}
 .av-user{background:rgba(45,45,45,.4);border:1px solid var(--line2);}
 .av-sys{background:rgba(20,20,20,.6);border:1px solid var(--line);}
-.msg-main{padding:12px 14px 13px;position:relative;}
+.msg-main{padding:12px 14px 13px;position:relative;min-width:0;overflow:hidden;}
 .msg-head{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
 .msg-who{font-size:10px;font-weight:600;letter-spacing:.07em;}
 .who-a{color:var(--a-hue);}.who-b{color:var(--b-hue);}.who-c{color:var(--c-hue);}.who-d{color:var(--d-hue);}
@@ -114,19 +120,20 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .disc-badge{font-size:9px;color:var(--a-hue);background:var(--a-glow);border:1px solid var(--a-rim);padding:1px 5px;border-radius:1px;letter-spacing:.03em;}
 .msg-ts{font-size:9px;color:var(--dim2);margin-left:auto;}
 
-/* Retry button — shows on hover */
-.msg-actions{display:none;position:absolute;top:10px;right:12px;gap:4px;}
+/* Retry + quote buttons — hover on desktop, always shown on mobile */
+.msg-actions{display:none;position:absolute;top:10px;right:12px;gap:4px;align-items:center;}
 .msg-main:hover .msg-actions{display:flex;}
 .btn-retry{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--bg3);border:1px solid var(--line2);padding:2px 7px;border-radius:1px;cursor:pointer;transition:all .12s;letter-spacing:.03em;}
 .btn-retry:hover{color:var(--text);border-color:var(--dim2);}
 .btn-quote{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--bg3);border:1px solid var(--line2);padding:2px 7px;border-radius:1px;cursor:pointer;transition:all .12s;letter-spacing:.03em;}
 .btn-quote:hover{color:var(--a-hue);border-color:var(--a-rim);}
-/* Quote block rendered in msg-body */
+/* Quote hint label — desktop only, shows on hover */
+.quote-hint{font-size:9px;color:var(--dim2);font-family:var(--mono);letter-spacing:.03em;}
 .msg-body blockquote.agent-quote{border-left:2px solid var(--a-rim);margin:0 0 10px;padding:5px 10px;background:rgba(232,197,71,.04);border-radius:0 2px 2px 0;}
 .msg-body blockquote.agent-quote .quote-from{font-size:10px;font-family:var(--mono);color:var(--a-hue);margin-bottom:3px;font-weight:600;}
 .msg-body blockquote.agent-quote .quote-text{font-size:12px;color:#aaa;font-style:italic;}
 
-.msg-body{font-size:13px;line-height:1.75;color:var(--text);word-break:break-word;font-family:var(--sans);font-weight:300;}
+.msg-body{font-size:13px;line-height:1.75;color:var(--text);word-break:break-word;overflow-wrap:anywhere;font-family:var(--sans);font-weight:300;}
 .msg-body p{margin:0 0 10px;}
 .msg-body p:last-child{margin-bottom:0;}
 .msg-body h1{font-size:16px;font-weight:600;color:var(--text);margin:16px 0 8px;font-family:var(--mono);letter-spacing:.04em;border-bottom:1px solid var(--line2);padding-bottom:5px;}
@@ -163,7 +170,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .hr{height:1px;background:var(--line2);}
 
 /* ── INPUT ZONE ─────────────────────────── */
-.inputzone{background:var(--bg2);padding:8px 14px 12px;}
+.inputzone{background:var(--bg2);padding:8px 14px 12px;overflow:hidden;}
 
 /* Attachment preview strip */
 .attach-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;padding:0 2px;}
@@ -173,9 +180,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .attach-chip .rm:hover{color:var(--text);}
 .attach-img-thumb{width:32px;height:32px;object-fit:cover;border-radius:1px;flex-shrink:0;}
 
-.route-bar{display:flex;gap:4px;margin-bottom:6px;align-items:center;}
+.route-bar{display:flex;gap:4px;margin-bottom:6px;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.route-bar::-webkit-scrollbar{display:none;}
 .route-lbl{font-size:9px;color:var(--dim);letter-spacing:.07em;margin-right:2px;}
-.rc{font-size:9px;padding:3px 8px 3px 6px;border-radius:1px;border:1px solid;cursor:pointer;letter-spacing:.05em;font-weight:500;transition:all .12s;opacity:.35;font-family:var(--mono);display:flex;align-items:center;gap:4px;height:22px;}
+.rc{font-size:9px;padding:3px 8px 3px 6px;border-radius:1px;border:1px solid;cursor:pointer;letter-spacing:.05em;font-weight:500;transition:all .12s;opacity:.35;font-family:var(--mono);display:flex;align-items:center;gap:4px;height:22px;flex-shrink:0;white-space:nowrap;}
 .rc.on{opacity:1;}
 .rc-a{color:var(--a-hue);border-color:var(--a-rim);}.rc-a.on{background:var(--a-glow);}
 .rc-b{color:var(--b-hue);border-color:var(--b-rim);}.rc-b.on{background:var(--b-glow);}
@@ -227,7 +235,7 @@ textarea::placeholder{color:var(--dim2);}
 /* Key file modal */
 .keys-modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
 .keys-modal-wrap.open{display:flex;}
-.keys-modal{background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:0;width:420px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;}
+.keys-modal{background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:0;width:min(420px,100%);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;}
 .keys-modal-head{padding:16px 18px 12px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;}
 .keys-modal-head h3{font-size:11px;font-weight:600;letter-spacing:.08em;}
 .keys-modal-body{padding:16px 18px;}
@@ -252,14 +260,14 @@ textarea::placeholder{color:var(--dim2);}
 /* Export modal */
 .export-modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;}
 .export-modal-wrap.open{display:flex;}
-.export-modal{background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:20px;width:360px;}
+.export-modal{background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:20px;width:min(360px,100%);}
 .export-modal h3{font-size:11px;font-weight:600;letter-spacing:.08em;margin-bottom:14px;}
 .export-modal input{width:100%;background:var(--bg3);border:1px solid var(--line2);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;border-radius:2px;outline:none;margin-bottom:12px;}
 .export-modal input:focus{border-color:var(--dim2);}
 .export-modal-btns{display:flex;gap:7px;justify-content:flex-end;}
 
 /* Config panel */
-.panel{width:430px;height:100vh;overflow-y:auto;background:var(--bg2);border-left:1px solid var(--line2);display:flex;flex-direction:column;}
+.panel{width:min(430px,100%);height:100vh;overflow-y:auto;background:var(--bg2);border-left:1px solid var(--line2);display:flex;flex-direction:column;}
 .panel::-webkit-scrollbar{width:3px;}.panel::-webkit-scrollbar-thumb{background:var(--line2);}
 .panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line2);position:sticky;top:0;background:var(--bg2);z-index:1;}
 .panel-title{font-size:11px;font-weight:600;letter-spacing:.08em;}
@@ -281,6 +289,110 @@ textarea::placeholder{color:var(--dim2);}
 .btn-save:hover{background:var(--dim2);}
 .btn-cancel{font-family:var(--mono);font-size:10px;letter-spacing:.05em;background:none;color:var(--dim);border:1px solid var(--line2);padding:7px 13px;border-radius:2px;cursor:pointer;transition:all .15s;}
 .btn-cancel:hover{color:var(--text);}
+/* ── QUOTE BUTTON — always visible under agent messages ── */
+.msg-actions{
+  display:flex;
+  position:static;
+  margin-top:8px;
+  gap:4px;
+  align-items:center;
+}
+.msg-main:not(:hover) .msg-actions .btn-retry{opacity:.35;}
+.msg-main:not(:hover) .msg-actions .btn-quote{opacity:.35;}
+.msg-main:hover .msg-actions .btn-retry,
+.msg-main:hover .msg-actions .btn-quote{opacity:1;}
+
+/* ── @MENTION AUTOCOMPLETE ── */
+.mention-dropdown{
+  display:none;position:absolute;bottom:100%;left:0;right:0;
+  background:var(--bg2);border:1px solid var(--line2);border-radius:3px;
+  overflow:hidden;z-index:50;margin-bottom:4px;
+  box-shadow:0 -4px 16px rgba(0,0,0,.5);
+}
+.mention-dropdown.open{display:block;}
+.mention-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;cursor:pointer;
+  font-family:var(--mono);font-size:12px;
+  transition:background .1s;
+  border-bottom:1px solid var(--line);
+}
+.mention-item:last-child{border-bottom:none;}
+.mention-item:hover,.mention-item.active{background:var(--bg3);}
+.mention-item .m-name{font-weight:600;letter-spacing:.05em;}
+.mention-item .m-model{font-size:10px;color:var(--dim);margin-left:auto;}
+
+/* ── MOBILE ── iPhone 14 Pro = 393px CSS width ──── */
+@media (max-width: 500px) {
+
+  /* 1. Root */
+  html,body{overflow-x:hidden;}
+  .shell{height:100dvh;overflow:hidden;}
+
+  /* 2. Topbar — tighter penguins, square icon buttons */
+  .topbar{padding:0 10px;}
+  .session-cost{display:none;}
+  .pci{width:20px;height:20px;margin-left:-6px;}
+  .pci:first-child{margin-left:0;}
+  .export-text{display:none;}
+  .export-icon{display:block !important;}
+  .btn-export{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;}
+  /* Agents button → square icon */
+  .agents-text{display:none;}
+  .agents-icon{display:block !important;}
+  .btn-bar.btn-agents{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;}
+
+  /* Hide routing explanation hint */
+  .hint-routing{display:none;}
+
+  /* 3. Messages */
+  .msg{grid-template-columns:40px minmax(0,1fr);}
+  .msg-badge,.msg-ts{display:none;}
+  .msg-actions{
+    position:static !important;
+    display:flex !important;
+    opacity:1 !important;
+    margin-top:8px;
+  }
+
+  /* 4. Empty state — stack vertically, 0.95× scaled */
+  .empty{padding:20px 12px;}
+  .empty-agents{flex-direction:column;width:min(285px,100%);}
+  .empty-hint{width:min(285px,100%);font-size:10px;padding:8px 11px;}
+  .ea{border-right:none !important;border-bottom:1px solid var(--line2);padding:9px 11px;}
+  .ea:last-child{border-bottom:none;}
+  .ea-tag{font-size:11px;}
+  .ea-model{font-size:9px;}
+  .ea-desc{font-size:10px;}
+
+  /* Attach icon bigger for tap */
+  .attach-btn{font-size:18px;}
+
+  /* 5. Input zone */
+  .inputzone{padding:6px 10px 8px;}
+  .inp-foot{display:none;}
+  .route-lbl{display:none;}
+  /* Hide "Attach File" text label, keep icon */
+  .attach-btn span{display:none;}
+  /* Hide penguin icons in route chips */
+  .rc span[id^="prc-"]{display:none;}
+  #inp{font-size:16px !important;}
+
+  /* 6. Panels — bottom sheet */
+  .panel{width:100%;height:100dvh;border-left:none;}
+  .field-2{grid-template-columns:1fr !important;}
+  .export-modal-wrap,.keys-modal-wrap{align-items:flex-end;}
+  .export-modal,.keys-modal{
+    width:100%;border-radius:12px 12px 0 0;
+    padding-bottom:env(safe-area-inset-bottom,20px);
+  }
+}
+
+/* Safe area inset for home bar */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .inputzone{padding-bottom:calc(8px + env(safe-area-inset-bottom));}
+  .shell{height:100dvh;}
+}
 </style>
 </head>
 <body>
@@ -308,8 +420,20 @@ textarea::placeholder{color:var(--dim2);}
   </div>
   <div class="topbar-right">
     <span class="session-cost" id="session-cost">$0.0000</span>
-    <button class="btn-bar" onclick="openPanel()">⚙ agents</button>
-    <button class="btn-export" onclick="openExport()">↓ export</button>
+    <button class="btn-bar btn-agents" onclick="openPanel()">
+      <span class="agents-text">⚙ agents</span>
+      <svg class="agents-icon" style="display:none;" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 5.17,3.22 L 5.84,0.61 L 8.16,0.61 L 8.83,3.22 L 9.36,3.53 L 11.96,2.79 L 13.12,4.81 L 11.19,6.69 L 11.19,7.31 L 13.12,9.19 L 11.96,11.21 L 9.36,10.47 L 8.83,10.78 L 8.16,13.39 L 5.84,13.39 L 5.17,10.78 L 4.64,10.47 L 2.04,11.21 L 0.88,9.19 L 2.81,7.31 L 2.81,6.69 L 0.88,4.81 L 2.04,2.79 L 4.64,3.53 Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        <circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+    </button>
+    <button class="btn-export" onclick="openExport()">
+      <span class="export-text">↓ export</span>
+      <svg class="export-icon" style="display:none;" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 1v7M4 5.5L7 8.5L10 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 10v1.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -323,7 +447,7 @@ textarea::placeholder{color:var(--dim2);}
       <div class="ea"><div class="ea-hd"><span id="pe-c"></span><span class="ea-tag" style="color:var(--c-hue)">@codex</span></div><div class="ea-model" id="em-c">o3</div><div class="ea-desc">OpenAI · cross-check · reasoning</div></div>
     </div>
     <div class="empty-hint">
-      <div>no @mention = all reply &nbsp;·&nbsp; click 🐧 to filter</div>
+      <div class="hint-routing">no @mention = all reply &nbsp;·&nbsp; click 🐧 to filter</div>
       <div style="margin-top:3px;"><span>⟳ discuss</span> = debate mode</div>
     </div>
   </div>
@@ -346,6 +470,7 @@ textarea::placeholder{color:var(--dim2);}
   </div>
   <div class="inp-row">
     <div class="inp-wrap">
+      <div class="mention-dropdown" id="mention-dropdown"></div>
       <textarea id="inp" placeholder="message agents... @brain @thinker @coder @codex or send to all" rows="1"
         oninput="onInput(this)" onkeydown="onKey(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)"></textarea>
       <button class="attach-btn" id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach file"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M11.5 6L6.5 11C5.1 12.4 2.9 12.4 1.5 11C0.1 9.6 0.1 7.4 1.5 6L6 1.5C6.9 0.6 8.3 0.6 9.2 1.5C10.1 2.4 10.1 3.8 9.2 4.7L5 8.9C4.6 9.3 3.9 9.3 3.5 8.9C3.1 8.5 3.1 7.8 3.5 7.4L7 3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:9px;letter-spacing:.04em;font-family:var(--mono);white-space:nowrap;">Attach File</span></button>
@@ -412,10 +537,10 @@ textarea::placeholder{color:var(--dim2);}
         <div class="cfg-lbl">API KEYS</div>
         <div class="field"><label>Anthropic Key</label><input type="password" id="cfg-anth" placeholder="sk-ant-..."/></div>
         <div class="field"><label>OpenAI Key</label><input type="password" id="cfg-oai" placeholder="sk-..."/></div>
-        <div style="display:flex;gap:7px;margin-top:4px;margin-bottom:2px;">
-          <button class="btn-cancel" style="flex:1;font-size:9px;" onclick="exportKeyFile()">↓ save as encrypted file</button>
-          <label style="flex:1;cursor:pointer;">
-            <span class="btn-cancel" style="display:block;text-align:center;font-size:9px;padding:7px 13px;border-radius:2px;border:1px solid var(--line2);font-family:var(--mono);color:var(--dim);letter-spacing:.05em;transition:all .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim)'">↑ load from file</span>
+        <div style="display:flex;gap:7px;margin-top:4px;margin-bottom:2px;align-items:stretch;">
+          <button class="btn-cancel" style="flex:1;font-size:9px;white-space:normal;line-height:1.3;" onclick="exportKeyFile()">↓ save as encrypted file</button>
+          <label style="flex:1;cursor:pointer;display:flex;">
+            <span class="btn-cancel" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;line-height:1.3;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim)'">↑ load from file</span>
             <input type="file" accept=".tpok" onchange="loadKeyFileInPanel(this)" style="display:none;"/>
           </label>
         </div>
@@ -431,7 +556,7 @@ textarea::placeholder{color:var(--dim2);}
           <div class="field"><label>Model</label><select id="cfg-a-m"><option value="claude-opus-4-6">claude-opus-4-6</option><option value="claude-sonnet-4-6">claude-sonnet-4-6</option></select></div>
           <div class="field"><label>Label</label><input type="text" id="cfg-a-l" value="brain"/></div>
         </div>
-        <div class="field"><label>System Prompt</label><textarea id="cfg-a-s" rows="3">You are a strategic thought partner and product architect. Think deeply, reason through tradeoffs, and help make high-quality decisions. Be direct and precise.</textarea></div>
+        <div class="field"><label>System Prompt</label><textarea id="cfg-a-s" rows="3">You are @brain in a multi-agent session with @thinker (GPT-5.4), @coder (Claude Sonnet), @codex (o3). Messages prefixed [@thinker]: etc. are real agent responses — engage directly. You are a strategic thought partner and product architect. Be direct and precise.</textarea></div>
       </div>
       <div class="cfg-sec">
         <div class="cfg-lbl" style="color:var(--d-hue)"><span id="pc-d"></span>@thinker — openai reasoning</div>
@@ -439,7 +564,7 @@ textarea::placeholder{color:var(--dim2);}
           <div class="field"><label>Model</label><select id="cfg-d-m"><option value="gpt-5.4">gpt-5.4</option><option value="gpt-5.4-mini">gpt-5.4-mini</option><option value="o3">o3</option><option value="o4-mini">o4-mini</option><option value="gpt-4o">gpt-4o</option></select></div>
           <div class="field"><label>Label</label><input type="text" id="cfg-d-l" value="thinker"/></div>
         </div>
-        <div class="field"><label>System Prompt</label><textarea id="cfg-d-s" rows="3">You are a deep reasoning partner. Think rigorously from first principles. Challenge assumptions, surface hidden constraints, and reason to the strongest possible conclusion.</textarea></div>
+        <div class="field"><label>System Prompt</label><textarea id="cfg-d-s" rows="3">You are @thinker in a multi-agent session with @brain (Claude Opus), @coder (Claude Sonnet), @codex (o3). Messages prefixed [@brain]: etc. are real agent responses — engage directly. Think rigorously from first principles. Challenge assumptions, reason to the strongest conclusion.</textarea></div>
       </div>
       <div class="cfg-sec">
         <div class="cfg-lbl" style="color:var(--b-hue)"><span id="pc-b"></span>@coder — anthropic</div>
@@ -520,10 +645,10 @@ function initPx(){
 const cfg={
   anthropicKey:'',openaiKey:'',
   agents:{
-    a:{label:'brain',model:'claude-opus-4-6',provider:'anthropic',system:'You are a strategic thought partner and product architect. Think deeply, reason through tradeoffs, and help make high-quality decisions. Be direct and precise.'},
-    b:{label:'coder',model:'claude-sonnet-4-6',provider:'anthropic',system:'You are a senior software engineer. Write clean, production-ready code. Be concrete and implementation-focused. Prefer code over explanation.'},
-    c:{label:'codex',model:'o3',provider:'openai',system:'You are an expert software engineer and systems thinker. Provide precise, well-reasoned solutions. Think step by step for complex problems.'},
-    d:{label:'thinker',model:'gpt-5.4',provider:'openai',system:'You are a deep reasoning partner. Think rigorously from first principles. Challenge assumptions, surface hidden constraints, and reason to the strongest possible conclusion.'},
+    a:{label:'brain',model:'claude-opus-4-6',provider:'anthropic',system:'You are @brain in a multi-agent collaboration session. Other agents in this session include @thinker (GPT-5.4), @coder (Claude Sonnet), and @codex (o3). When you see messages prefixed with [@thinker]:, [@coder]:, or [@codex]:, these are real responses from other AI agents in this session — engage with them directly. You are a strategic thought partner and product architect. Think deeply, reason through tradeoffs, and help make high-quality decisions. Be direct and precise.'},
+    b:{label:'coder',model:'claude-sonnet-4-6',provider:'anthropic',system:'You are @coder in a multi-agent collaboration session. Other agents include @brain (Claude Opus), @thinker (GPT-5.4), and @codex (o3). When you see messages prefixed with [@brain]:, [@thinker]:, or [@codex]:, these are real responses from other AI agents — engage with them directly. You are a senior software engineer. Write clean, production-ready code. Be concrete and implementation-focused. Prefer code over explanation.'},
+    c:{label:'codex',model:'o3',provider:'openai',system:'You are @codex in a multi-agent collaboration session. Other agents include @brain (Claude Opus), @thinker (GPT-5.4), and @coder (Claude Sonnet). When you see messages prefixed with [@brain]:, [@thinker]:, or [@coder]:, these are real responses from other AI agents — engage with them directly. You are an expert software engineer and systems thinker. Provide precise, well-reasoned solutions. Think step by step for complex problems.'},
+    d:{label:'thinker',model:'gpt-5.4',provider:'openai',system:'You are @thinker in a multi-agent collaboration session. Other agents include @brain (Claude Opus), @coder (Claude Sonnet), and @codex (o3). When you see messages prefixed with [@brain]:, [@coder]:, or [@codex]:, these are real responses from other AI agents in this session — engage with them directly. Think rigorously from first principles. Challenge assumptions, surface hidden constraints, and reason to the strongest possible conclusion.'},
   }
 };
 
@@ -678,12 +803,99 @@ function buildOpenAIContent(text){
   return parts.length===0?text:parts.length===1&&parts[0].type==='text'?parts[0].text:parts;
 }
 
+// ── @MENTION AUTOCOMPLETE ─────────────────────────
+let mentionState={active:false,start:-1,selectedIdx:0};
+
+function getMentionQuery(val,cursorPos){
+  // Find last @ before cursor
+  const before=val.slice(0,cursorPos);
+  const atIdx=before.lastIndexOf('@');
+  if(atIdx===-1) return null;
+  // Only trigger if @ is at start or after whitespace
+  if(atIdx>0&&!/\s/.test(before[atIdx-1])) return null;
+  const query=before.slice(atIdx+1);
+  // Don't show if space in query
+  if(/\s/.test(query)) return null;
+  return{query,start:atIdx};
+}
+
+function getMatchingAgents(query){
+  const q=query.toLowerCase();
+  return ['a','b','c','d']
+    .map(id=>({id,label:cfg.agents[id].label,model:cfg.agents[id].model}))
+    .filter(a=>a.label.toLowerCase().startsWith(q));
+}
+
+function showMentionDropdown(matches,selectedIdx){
+  const dd=document.getElementById('mention-dropdown');
+  if(!matches.length){dd.classList.remove('open');return;}
+  const colors={a:'var(--a-hue)',b:'var(--b-hue)',c:'var(--c-hue)',d:'var(--d-hue)'};
+  dd.innerHTML=matches.map((a,i)=>`
+    <div class="mention-item${i===selectedIdx?' active':''}" onmousedown="selectMention(${i})">
+      <span style="display:flex;image-rendering:pixelated;" id="ma-px-${a.id}"></span>
+      <span class="m-name" style="color:${colors[a.id]}">@${a.label}</span>
+      <span class="m-model">${a.model}</span>
+    </div>`).join('');
+  dd.classList.add('open');
+  // Inject pixel art into dropdown items
+  matches.forEach(a=>{
+    const el=document.getElementById(`ma-px-${a.id}`);
+    if(el)el.innerHTML=pxSVG(a.id,2);
+  });
+}
+
+function selectMention(idx){
+  const inp=document.getElementById('inp');
+  const val=inp.value;
+  const cursor=inp.selectionStart;
+  const m=getMentionQuery(val,cursor);
+  if(!m) return;
+  const agent=getMatchingAgents(m.query)[idx];
+  if(!agent) return;
+  const before=val.slice(0,m.start);
+  const after=val.slice(cursor);
+  inp.value=before+'@'+agent.label+' '+after;
+  const newPos=m.start+agent.label.length+2;
+  inp.selectionStart=inp.selectionEnd=newPos;
+  closeMentionDropdown();
+  inp.focus();
+  onInput(inp);
+}
+
+function closeMentionDropdown(){
+  document.getElementById('mention-dropdown').classList.remove('open');
+  mentionState={active:false,start:-1,selectedIdx:0};
+}
+
 // ── INPUT ─────────────────────────────────────────
 function onInput(el){
-  el.style.height='auto';el.style.height=Math.min(el.scrollHeight,180)+'px';
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,200)+'px';
   document.getElementById('send-btn').disabled=!el.value.trim()||isBusy();
+  // @mention autocomplete
+  const m=getMentionQuery(el.value,el.selectionStart);
+  if(m){
+    const matches=getMatchingAgents(m.query);
+    mentionState.active=matches.length>0;
+    mentionState.selectedIdx=Math.min(mentionState.selectedIdx||0,Math.max(matches.length-1,0));
+    showMentionDropdown(matches,mentionState.selectedIdx);
+  } else {
+    closeMentionDropdown();
+  }
 }
-function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}}
+function onKey(e){
+  const dd=document.getElementById('mention-dropdown');
+  if(dd.classList.contains('open')){
+    const inp=document.getElementById('inp');
+    const m=getMentionQuery(inp.value,inp.selectionStart);
+    const matches=m?getMatchingAgents(m.query):[];
+    if(e.key==='ArrowDown'){e.preventDefault();mentionState.selectedIdx=Math.min((mentionState.selectedIdx||0)+1,matches.length-1);showMentionDropdown(matches,mentionState.selectedIdx);return;}
+    if(e.key==='ArrowUp'){e.preventDefault();mentionState.selectedIdx=Math.max((mentionState.selectedIdx||0)-1,0);showMentionDropdown(matches,mentionState.selectedIdx);return;}
+    if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();selectMention(mentionState.selectedIdx||0);return;}
+    if(e.key==='Escape'){closeMentionDropdown();return;}
+  }
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}
+}
 function isBusy(){return Object.values(state.busy).some(Boolean);}
 
 // ── SEND ──────────────────────────────────────────
@@ -845,39 +1057,37 @@ async function triggerDiscuss(){
   const tLast=state.history.d.filter(m=>m.role==='assistant').at(-1)?.content;
   if(!bLast||!tLast){addSysMsg('Need responses from both @brain and @thinker first.');return;}
 
-  addSysMsg('⟳ discussion round — @brain and @thinker responding to each other');
-
   const bText=typeof bLast==='string'?bLast:(bLast?.[0]?.text||'');
   const tText=typeof tLast==='string'?tLast:(tLast?.[0]?.text||'');
 
-  // Run in parallel — each gets peer content injected only into the API payload,
-  // not stored in history (so thread stays clean and histories don't diverge)
-  await Promise.all([
-    discussCall('a', tText, 'Another AI assistant (GPT-5.4) just responded to the same question with the following analysis. Engage with their reasoning directly — where do you agree, where do you push back, and why?'),
-    discussCall('d', bText, 'Another AI assistant (Claude Opus) just responded to the same question with the following analysis. Engage with their reasoning directly — where do you agree, where do you push back, and why?'),
-  ]);
+  addSysMsg('⟳ discussion — @brain and @thinker responding to each other');
+
+  // Sequential execution:
+  // 1. @brain receives [@thinker]'s last reply as a user message → generates its discuss response
+  // 2. @thinker receives [@brain]'s original reply AND @brain's discuss response → can engage both
+  // Peer messages injected as user-role with [@agent]: prefix per the analysis above.
+  // NOT stored in state.history — history stays clean, no divergence.
+  const bReply = await discussCall('a', `[@thinker]:\n${tText}`);
+  await discussCall('d', `[@brain]:\n${bText}\n\n[@brain — responding to you]:\n${bReply||''}`);
 
   document.getElementById('btn-discuss').disabled=false;
   persistState();
   if(state.filterAgent)refreshFilter();
 }
 
-// Discuss-specific API call: injects peer content into payload only, does NOT pollute history
-async function discussCall(id, peerText, framePrompt){
+// discussCall: injects peer content as user message into API payload only.
+// Returns the reply so it can be passed to the next agent in sequence.
+async function discussCall(id, peerContent){
   const agent=cfg.agents[id];
   state.busy[id]=true;setBusy(id,true);
   const bodyEl=addAgentMsg(id,true);
 
-  // Build messages: use existing history + a fresh user turn with peer content
-  // The peer content is NOT saved to state.history — it's one-shot
-  const peerMsg={
-    role:'user',
-    content:`${framePrompt}\n\n---\n${peerText}\n---\n\nNow respond directly to this.`
-  };
-  const messages=[...state.history[id], peerMsg];
+  // Build messages array: full history + peer injection (payload-only, not saved to history)
+  const messages=[...state.history[id],{role:'user',content:peerContent}];
 
+  let reply='';
   try{
-    let reply='',inT=0,outT=0;
+    let inT=0,outT=0;
     if(agent.provider==='anthropic'){
       const ak=cleanKey(cfg.anthropicKey);
       if(!ak)throw new Error('Anthropic API key not set');
@@ -905,11 +1115,9 @@ async function discussCall(id, peerText, framePrompt){
       const data=await res.json();
       reply=data.choices?.[0]?.message?.content||'';inT=data.usage?.prompt_tokens||0;outT=data.usage?.completion_tokens||0;
     }
-
     const cost=costEst(agent.model,inT,outT);
     state.totalCost+=cost;updateCost();
-
-    // Save the discuss reply to history as assistant turn (peer prompt stays out)
+    // Save discuss reply to history as assistant turn — peer injection stays OUT
     state.history[id].push({role:'assistant',content:reply});
     bodyEl.innerHTML=fmtBody(reply);
     logAppend(id,agent.label,agent.model,reply);
@@ -918,6 +1126,7 @@ async function discussCall(id, peerText, framePrompt){
     bodyEl.innerHTML=`<span style="color:#e05555;font-family:var(--mono);font-size:11px">error: ${esc(err.message)}</span>`;
   }
   state.busy[id]=false;setBusy(id,false);scrollBot();
+  return reply;
 }
 
 function showDiscussTrigger(){
@@ -1242,6 +1451,9 @@ function saveConfig(){
   addSysMsg(`config saved · ${['a','b','c','d'].map(id=>`@${cfg.agents[id].label}=${cfg.agents[id].model}`).join(' · ')}`);
 }
 
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.inp-wrap')) closeMentionDropdown();
+});
 window.addEventListener('beforeunload',()=>{persistState();exportMdSilent();});
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closePanel();});
 document.getElementById('export-modal').addEventListener('click',e=>{if(e.target===document.getElementById('export-modal'))closeExport();});
