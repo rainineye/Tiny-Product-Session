@@ -659,10 +659,32 @@ const state={
   totalCost:0,
   filterAgent:null,
   attachments:[],
+  lastRoundCtx:null,
 };
 
 const PRICES={'claude-opus-4-6':{i:15,o:75},'claude-sonnet-4-6':{i:3,o:15},'gpt-5.4':{i:2.5,o:15},'gpt-5.4-mini':{i:0.75,o:4.5},'o3':{i:2,o:8},'o4-mini':{i:1.1,o:4.4},'gpt-4o':{i:2.5,o:10},'codex-mini-latest':{i:1.5,o:6}};
 function costEst(model,i,o){const p=PRICES[model]||{i:3,o:15};return(i/1e6)*p.i+(o/1e6)*p.o;}
+
+// ── HISTORY TRIMMING ──────────────────────────────
+// Keep last N user+assistant pairs per agent to bound token usage
+const MAX_HIST=10;
+function trimHistory(id){
+  const h=state.history[id];
+  if(h.length>MAX_HIST*2) state.history[id]=h.slice(-MAX_HIST*2);
+}
+
+// ── CROSS-AGENT CONTEXT ───────────────────────────
+// After each round, snapshot other agents' last replies (≤150 chars each).
+// Injected into API payload only — never stored in history.
+function saveRoundCtx(ids){
+  state.lastRoundCtx={};
+  ids.forEach(id=>{
+    const last=state.history[id].filter(m=>m.role==='assistant').at(-1);
+    if(!last)return;
+    const t=typeof last.content==='string'?last.content:(last.content?.[0]?.text||'');
+    state.lastRoundCtx[id]=t.slice(0,150).replace(/\n+/g,' ')+(t.length>150?'…':'');
+  });
+}
 
 // ── FILTER ────────────────────────────────────────
 function toggleFilter(id){
@@ -920,6 +942,7 @@ async function doSend(){
   const agentIds=Object.entries(targets).filter(([,v])=>v).map(([id])=>id);
   if(!agentIds.length){addSysMsg('No agents selected.');return;}
   await Promise.all(agentIds.map(id=>callAgent(id,text,false,attachSnap)));
+  saveRoundCtx(agentIds);
   if(targets.a&&targets.d)showDiscussTrigger();
   document.getElementById('btn-discuss').disabled=!(targets.a&&targets.d);
   persistState();
@@ -976,6 +999,24 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
   }
   state.history[id].push({role:'user',content:userContent});
 
+  // Build API payload: inject peers' last-round snippets into current user message.
+  // Injected at payload level only — history stays clean, no token accumulation.
+  let apiMsgs=state.history[id];
+  if(!isDisc && state.lastRoundCtx && Object.keys(state.lastRoundCtx).length>=2){
+    const peers=Object.entries(state.lastRoundCtx)
+      .filter(([pid])=>pid!==id)
+      .map(([pid,snip])=>`[@${cfg.agents[pid].label}]: ${snip}`)
+      .join('\n');
+    if(peers){
+      const pre=`[Other agents last round]\n${peers}\n\n`;
+      const last=apiMsgs.at(-1);
+      const ec=typeof last.content==='string'
+        ?pre+last.content
+        :[{type:'text',text:pre},...(Array.isArray(last.content)?last.content:[{type:'text',text:String(last.content)}])];
+      apiMsgs=[...apiMsgs.slice(0,-1),{role:'user',content:ec}];
+    }
+  }
+
   try{
     let reply='',inT=0,outT=0;
     if(agent.provider==='anthropic'){
@@ -989,17 +1030,36 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
           'anthropic-version':'2023-06-01',
           'anthropic-dangerous-direct-browser-access':'true'
         },
-        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages:state.history[id]})
+        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages:apiMsgs,stream:true})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
-      const data=await res.json();
-      reply=data.content?.[0]?.text||'';inT=data.usage?.input_tokens||0;outT=data.usage?.output_tokens||0;
+      // Stream SSE response token-by-token
+      const reader=res.body.getReader();const dec=new TextDecoder();
+      let buf='',lastRenderTs=0;
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop();
+        for(const line of lines){
+          if(!line.startsWith('data:'))continue;
+          const raw=line.slice(5).trim();
+          try{
+            const evt=JSON.parse(raw);
+            if(evt.type==='content_block_delta'&&evt.delta?.type==='text_delta'){
+              reply+=evt.delta.text;
+              const now=Date.now();
+              if(now-lastRenderTs>80){bodyEl.innerHTML=fmtBody(reply);scrollBot();lastRenderTs=now;}
+            }
+            if(evt.type==='message_start'&&evt.message?.usage)inT=evt.message.usage.input_tokens;
+            if(evt.type==='message_delta'&&evt.usage)outT=evt.usage.output_tokens;
+          }catch(e){}
+        }
+      }
     } else {
       const ok=cleanKey(cfg.openaiKey);
       if(!ok)throw new Error('OpenAI API key not set — open ⚙ agents');
-      // OpenAI blocks direct browser calls (CORS). Route through corsproxy.io
       const oaiUrl='https://tpo-proxy.rainineyeweb3.workers.dev/v1/chat/completions';
-      const msgs=[{role:'system',content:agent.system},...state.history[id]];
+      const msgs=[{role:'system',content:agent.system},...apiMsgs];
       let res;
       try{
         res=await fetch(oaiUrl,{
@@ -1017,6 +1077,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
     const cost=costEst(agent.model,inT,outT);
     state.totalCost+=cost;updateCost();
     state.history[id].push({role:'assistant',content:reply});
+    trimHistory(id);
     bodyEl.innerHTML=fmtBody(reply);
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
@@ -1414,7 +1475,7 @@ function rebuildThread(){
 }
 function clearThread(){
   ['a','b','c','d'].forEach(id=>{state.history[id]=[];});state.totalCost=0;updateCost();
-  state.filterAgent=null;state.attachments=[];renderAttachStrip();
+  state.filterAgent=null;state.attachments=[];renderAttachStrip();state.lastRoundCtx=null;
   document.getElementById('thread').classList.remove('filter-on');
   document.getElementById('btn-discuss').disabled=true;
   document.getElementById('filter-hint').textContent='';
