@@ -48,8 +48,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .pci-d{color:var(--d-hue);z-index:2;}
 .pci-b{color:var(--b-hue);z-index:3;}
 .pci-c{color:var(--c-hue);z-index:4;}
-.live-dot{position:absolute;bottom:0px;right:0px;width:3px;height:3px;border-radius:50%;background:currentColor;opacity:0;}
-.live-dot.on{opacity:1;animation:blink 1.3s ease infinite;}
+.live-dot{position:absolute;bottom:0px;right:0px;width:3px;height:3px;border-radius:50%;background:currentColor;opacity:0;transition:width .15s,height .15s,background .15s;}
+.live-dot.on{opacity:1;animation:blink 1.3s ease infinite;width:7px;height:7px;bottom:-1px;right:-1px;cursor:pointer;}
+.live-dot.on:hover{animation:none;opacity:1;background:#e05555 !important;transform:scale(1.2);}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
 
 .session-title{font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
@@ -407,16 +408,16 @@ textarea::placeholder{color:var(--dim2);}
     <!-- 4 penguins in a row, overlapping, clickable filter -->
     <div class="pcluster" title="Click to filter thread by agent">
       <div class="pci pci-a active" id="ai-a" onclick="toggleFilter('a')" title="@brain">
-        <span id="pstrip-a"></span><span class="live-dot" id="dot-a"></span>
+        <span id="pstrip-a"></span><span class="live-dot" id="dot-a" onclick="stopAgent('a');event.stopPropagation()" title="Stop @brain"></span>
       </div>
       <div class="pci pci-d active" id="ai-d" onclick="toggleFilter('d')" title="@thinker">
-        <span id="pstrip-d"></span><span class="live-dot" id="dot-d"></span>
+        <span id="pstrip-d"></span><span class="live-dot" id="dot-d" onclick="stopAgent('d');event.stopPropagation()" title="Stop @thinker"></span>
       </div>
       <div class="pci pci-b active" id="ai-b" onclick="toggleFilter('b')" title="@coder">
-        <span id="pstrip-b"></span><span class="live-dot" id="dot-b"></span>
+        <span id="pstrip-b"></span><span class="live-dot" id="dot-b" onclick="stopAgent('b');event.stopPropagation()" title="Stop @coder"></span>
       </div>
       <div class="pci pci-c active" id="ai-c" onclick="toggleFilter('c')" title="@codex">
-        <span id="pstrip-c"></span><span class="live-dot" id="dot-c"></span>
+        <span id="pstrip-c"></span><span class="live-dot" id="dot-c" onclick="stopAgent('c');event.stopPropagation()" title="Stop @codex"></span>
       </div>
     </div>
     <span class="session-title"><span class="title-full">Tiny Product Session</span><span class="title-short">TPS</span></span>
@@ -658,6 +659,7 @@ const cfg={
 const state={
   history:{a:[],b:[],c:[],d:[]},
   busy:{a:false,b:false,c:false,d:false},
+  aborts:{},
   routes:{a:true,b:true,c:true,d:true},
   totalCost:0,
   filterAgent:null,
@@ -990,6 +992,7 @@ function cleanKey(k){return (k||'').replace(/[\s\n\r\t]/g,'');}
 async function callAgent(id,userText,isDisc=false,attachSnap=[]){
   const agent=cfg.agents[id];
   state.busy[id]=true;setBusy(id,true);
+  const ctrl=new AbortController();state.aborts[id]=ctrl;
   const bodyEl=addAgentMsg(id,isDisc);
 
   // Build content
@@ -1033,6 +1036,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
           'anthropic-version':'2023-06-01',
           'anthropic-dangerous-direct-browser-access':'true'
         },
+        signal:ctrl.signal,
         body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages:apiMsgs,stream:true})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
@@ -1068,9 +1072,11 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
         res=await fetch(oaiUrl,{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':`Bearer ${ok}`},
+          signal:ctrl.signal,
           body:JSON.stringify({model:agent.model,max_completion_tokens:1024,messages:msgs})
         });
       }catch(corsErr){
+        if(corsErr.name==='AbortError')throw corsErr;
         throw new Error('OpenAI CORS blocked — browser cannot call OpenAI directly. Try running via a local server (python -m http.server), or use @brain/@coder (Anthropic) instead.');
       }
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
@@ -1085,8 +1091,14 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
   } catch(err){
-    bodyEl.innerHTML=`<span style="color:#e05555;font-family:var(--mono);font-size:11px">error: ${esc(err.message)}</span>`;
+    if(err.name==='AbortError'){
+      bodyEl.innerHTML=`<span style="color:var(--text-dim);font-family:var(--mono);font-size:11px">stopped</span>`;
+    } else {
+      bodyEl.innerHTML=`<span style="color:#e05555;font-family:var(--mono);font-size:11px">error: ${esc(err.message)}</span>`;
+    }
     state.history[id].pop();
+  } finally {
+    delete state.aborts[id];
   }
   state.busy[id]=false;setBusy(id,false);scrollBot();
 }
@@ -1143,6 +1155,7 @@ async function triggerDiscuss(){
 async function discussCall(id, peerContent){
   const agent=cfg.agents[id];
   state.busy[id]=true;setBusy(id,true);
+  const ctrl=new AbortController();state.aborts[id]=ctrl;
   const bodyEl=addAgentMsg(id,true);
 
   // Build messages array: full history + peer injection (payload-only, not saved to history)
@@ -1157,6 +1170,7 @@ async function discussCall(id, peerContent){
       const res=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        signal:ctrl.signal,
         body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
@@ -1171,9 +1185,10 @@ async function discussCall(id, peerContent){
         res=await fetch('https://tpo-proxy.rainineyeweb3.workers.dev/v1/chat/completions',{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':`Bearer ${ok}`},
+          signal:ctrl.signal,
           body:JSON.stringify({model:agent.model,max_completion_tokens:1024,messages:msgs})
         });
-      }catch(e){throw new Error('OpenAI proxy unreachable');}
+      }catch(e){if(e.name==='AbortError')throw e;throw new Error('OpenAI proxy unreachable');}
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
       const data=await res.json();
       reply=data.choices?.[0]?.message?.content||'';inT=data.usage?.prompt_tokens||0;outT=data.usage?.completion_tokens||0;
@@ -1186,7 +1201,13 @@ async function discussCall(id, peerContent){
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
   } catch(err){
-    bodyEl.innerHTML=`<span style="color:#e05555;font-family:var(--mono);font-size:11px">error: ${esc(err.message)}</span>`;
+    if(err.name==='AbortError'){
+      bodyEl.innerHTML=`<span style="color:var(--text-dim);font-family:var(--mono);font-size:11px">stopped</span>`;
+    } else {
+      bodyEl.innerHTML=`<span style="color:#e05555;font-family:var(--mono);font-size:11px">error: ${esc(err.message)}</span>`;
+    }
+  } finally {
+    delete state.aborts[id];
   }
   state.busy[id]=false;setBusy(id,false);scrollBot();
   return reply;
@@ -1282,6 +1303,7 @@ function refreshFilter(){
 }
 
 function setBusy(id,busy){document.getElementById(`dot-${id}`).classList.toggle('on',busy);}
+function stopAgent(id){state.aborts[id]?.abort();}
 function scrollBot(){const t=document.getElementById('thread');t.scrollTop=t.scrollHeight;}
 function updateCost(){document.getElementById('session-cost').textContent=`$${state.totalCost.toFixed(4)}`;}
 function ts(){return new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',hour12:false});}
