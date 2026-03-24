@@ -469,6 +469,7 @@ textarea::placeholder{color:var(--dim2);}
     <div class="rc rc-b on" id="rc-b" onclick="toggleRoute('b')"><span id="prc-b"></span>@coder</div>
     <div class="rc rc-c on" id="rc-c" onclick="toggleRoute('c')"><span id="prc-c"></span>@codex</div>
     <button class="btn-discuss-inline" id="btn-discuss" onclick="triggerDiscuss()" disabled>⟳ discuss</button>
+    <span id="ctx-indicator" style="display:none;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.04em;padding:0 4px;"></span>
     <button class="btn-clear-thread" onclick="clearThread()">clear</button>
   </div>
   <div class="inp-row">
@@ -504,6 +505,7 @@ textarea::placeholder{color:var(--dim2);}
     <div class="keys-tabs" style="margin-bottom:14px;">
       <button class="keys-tab active" onclick="switchIOTab('export')">↓ Export</button>
       <button class="keys-tab" onclick="switchIOTab('import')">↑ Import</button>
+      <button class="keys-tab" onclick="switchIOTab('sync')">⟲ Sync</button>
     </div>
     <!-- Export tab -->
     <div id="iotab-export">
@@ -511,6 +513,35 @@ textarea::placeholder{color:var(--dim2);}
       <div class="export-modal-btns">
         <button class="btn-cancel" onclick="closeExport()">cancel</button>
         <button class="btn-save" onclick="doExport()">↓ download .md</button>
+      </div>
+    </div>
+    <!-- Sync tab -->
+    <div id="iotab-sync" style="display:none;">
+      <div style="font-size:10px;color:var(--dim);font-family:var(--sans);margin-bottom:12px;line-height:1.6;">
+        Bind a local <code style="font-family:var(--mono);background:var(--bg3);padding:1px 4px;border-radius:2px;">.md</code> file — the full multi-agent session log is written to it automatically after each response. Agents are informed of the filename in their system prompt.
+      </div>
+      <div class="keys-field" style="align-items:center;">
+        <label>log file</label>
+        <span id="sync-filename" style="font-size:10px;color:var(--dim);font-family:var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span>
+        <button id="sync-clear-btn" class="btn-cancel" style="display:none;padding:2px 8px;font-size:9px;margin-left:6px;" onclick="clearLogFile()">✕</button>
+      </div>
+      <div class="keys-field" style="margin-top:10px;align-items:center;">
+        <label>peer ctx</label>
+        <select id="sync-ctx-turns"
+          style="font-family:var(--mono);font-size:11px;background:var(--bg3);color:var(--text);border:1px solid var(--line2);padding:3px 6px;border-radius:2px;cursor:pointer;"
+          onchange="state.peerCtxTurns=parseInt(this.value);persistState();updateCtxIndicator();">
+          <option value="0">off</option>
+          <option value="-1">auto</option>
+          <option value="1">last 1 turn</option>
+          <option value="2">last 2 turns</option>
+          <option value="3">last 3 turns</option>
+          <option value="5">last 5 turns</option>
+        </select>
+        <span style="font-size:10px;color:var(--dim);margin-left:8px;font-family:var(--sans);">auto = search log for relevant sections, inject top matches ≤ ~500 tokens</span>
+      </div>
+      <div class="export-modal-btns" style="margin-top:14px;">
+        <button class="btn-cancel" onclick="closeExport()">close</button>
+        <button class="btn-save" onclick="bindLogFile()">⟲ bind file</button>
       </div>
     </div>
     <!-- Import tab -->
@@ -648,10 +679,10 @@ function initPx(){
 const cfg={
   anthropicKey:'',openaiKey:'',
   agents:{
-    a:{label:'brain',model:'claude-opus-4-6',provider:'anthropic',system:'You are @brain in a multi-agent collaboration session. Other agents in this session include @thinker (GPT-5.4), @coder (Claude Sonnet), and @codex (o3). When you see messages prefixed with [@thinker]:, [@coder]:, or [@codex]:, these are real responses from other AI agents in this session — engage with them directly. You are a strategic thought partner and product architect. Think deeply, reason through tradeoffs, and help make high-quality decisions. Be direct and precise.'},
-    b:{label:'coder',model:'claude-sonnet-4-6',provider:'anthropic',system:'You are @coder in a multi-agent collaboration session. Other agents include @brain (Claude Opus), @thinker (GPT-5.4), and @codex (o3). When you see messages prefixed with [@brain]:, [@thinker]:, or [@codex]:, these are real responses from other AI agents — engage with them directly. You are a senior software engineer. Write clean, production-ready code. Be concrete and implementation-focused. Prefer code over explanation.'},
-    c:{label:'codex',model:'o3',provider:'openai',system:'You are @codex in a multi-agent collaboration session. Other agents include @brain (Claude Opus), @thinker (GPT-5.4), and @coder (Claude Sonnet). When you see messages prefixed with [@brain]:, [@thinker]:, or [@coder]:, these are real responses from other AI agents — engage with them directly. You are an expert software engineer and systems thinker. Provide precise, well-reasoned solutions. Think step by step for complex problems.'},
-    d:{label:'thinker',model:'gpt-5.4',provider:'openai',system:'You are @thinker in a multi-agent collaboration session. Other agents include @brain (Claude Opus), @coder (Claude Sonnet), and @codex (o3). When you see messages prefixed with [@brain]:, [@coder]:, or [@codex]:, these are real responses from other AI agents in this session — engage with them directly. Think rigorously from first principles. Challenge assumptions, surface hidden constraints, and reason to the strongest possible conclusion.'},
+    a:{label:'brain',model:'claude-opus-4-6',provider:'anthropic',system:'You are @brain — one of four real AI agents deployed in parallel in this multi-agent product session. The four agents are: @brain (you, Claude Opus 4.6 by Anthropic), @thinker (GPT-5.4 by OpenAI), @coder (Claude Sonnet 4.6 by Anthropic), @codex (o3 by OpenAI). All four receive the same user messages and reply in the same shared thread. This is a genuine parallel deployment, not a simulation. When you see content prefixed with [@thinker]:, [@coder]:, or [@codex]:, those are actual responses from those AI systems in this session — reference and engage with them directly. You are the strategic thought partner: architecture, tradeoffs, product decisions. Be direct and precise.'},
+    b:{label:'coder',model:'claude-sonnet-4-6',provider:'anthropic',system:'You are @coder — one of four real AI agents deployed in parallel in this multi-agent product session. The four agents are: @brain (Claude Opus 4.6 by Anthropic), @thinker (GPT-5.4 by OpenAI), @coder (you, Claude Sonnet 4.6 by Anthropic), @codex (o3 by OpenAI). All four receive the same user messages and reply in the same shared thread. This is a genuine parallel deployment, not a simulation. When you see content prefixed with [@brain]:, [@thinker]:, or [@codex]:, those are actual responses from those AI systems — reference and engage with them directly. You are the implementation specialist: write clean, production-ready code. Be concrete. Prefer code over explanation.'},
+    c:{label:'codex',model:'o3',provider:'openai',system:'You are @codex — one of four real AI agents deployed in parallel in this multi-agent product session. The four agents are: @brain (Claude Opus 4.6 by Anthropic), @thinker (GPT-5.4 by OpenAI), @coder (Claude Sonnet 4.6 by Anthropic), @codex (you, o3 by OpenAI). All four receive the same user messages and reply in the same shared thread. This is a genuine parallel deployment, not a simulation. When you see content prefixed with [@brain]:, [@thinker]:, or [@coder]:, those are actual responses from those AI systems — reference and engage with them directly. You are the cross-checker and algorithmic reasoner: verify correctness, find edge cases, think step by step.'},
+    d:{label:'thinker',model:'gpt-5.4',provider:'openai',system:'You are @thinker — one of four real AI agents deployed in parallel in this multi-agent product session. The four agents are: @brain (Claude Opus 4.6 by Anthropic), @thinker (you, GPT-5.4 by OpenAI), @coder (Claude Sonnet 4.6 by Anthropic), @codex (o3 by OpenAI). All four receive the same user messages and reply in the same shared thread. This is a genuine parallel deployment, not a simulation. When you see content prefixed with [@brain]:, [@coder]:, or [@codex]:, those are actual responses from those AI systems in this session — reference and engage with them directly. You are the first-principles reasoner: challenge assumptions, surface hidden constraints, reason to the strongest conclusion.'},
   }
 };
 
@@ -664,7 +695,9 @@ const state={
   totalCost:0,
   filterAgent:null,
   attachments:[],
-  lastRoundCtx:null,
+  logFileHandle:null,
+  logFileName:'',
+  peerCtxTurns:0,
 };
 
 const PRICES={'claude-opus-4-6':{i:15,o:75},'claude-sonnet-4-6':{i:3,o:15},'gpt-5.4':{i:2.5,o:15},'gpt-5.4-mini':{i:0.75,o:4.5},'o3':{i:2,o:8},'o4-mini':{i:1.1,o:4.4},'gpt-4o':{i:2.5,o:10},'codex-mini-latest':{i:1.5,o:6}};
@@ -678,18 +711,6 @@ function trimHistory(id){
   if(h.length>MAX_HIST*2) state.history[id]=h.slice(-MAX_HIST*2);
 }
 
-// ── CROSS-AGENT CONTEXT ───────────────────────────
-// After each round, snapshot other agents' last replies (≤150 chars each).
-// Injected into API payload only — never stored in history.
-function saveRoundCtx(ids){
-  state.lastRoundCtx={};
-  ids.forEach(id=>{
-    const last=state.history[id].filter(m=>m.role==='assistant').at(-1);
-    if(!last)return;
-    const t=typeof last.content==='string'?last.content:(last.content?.[0]?.text||'');
-    state.lastRoundCtx[id]=t.slice(0,150).replace(/\n+/g,' ')+(t.length>150?'…':'');
-  });
-}
 
 // ── FILTER ────────────────────────────────────────
 function toggleFilter(id){
@@ -947,7 +968,6 @@ async function doSend(){
   const agentIds=Object.entries(targets).filter(([,v])=>v).map(([id])=>id);
   if(!agentIds.length){addSysMsg('No agents selected.');return;}
   await Promise.all(agentIds.map(id=>callAgent(id,text,false,attachSnap)));
-  saveRoundCtx(agentIds);
   if(targets.a&&targets.d)showDiscussTrigger();
   document.getElementById('btn-discuss').disabled=!(targets.a&&targets.d);
   persistState();
@@ -989,6 +1009,85 @@ async function retryAgent(id,userText){
 // Sanitize API key — strip whitespace/newlines that cause header pattern errors
 function cleanKey(k){return (k||'').replace(/[\s\n\r\t]/g,'');}
 
+// Tokenize text for relevance scoring: ASCII words (>2 chars) + CJK character bigrams.
+function tokenize(text){
+  const t=text.toLowerCase();
+  const words=t.split(/[\s\W]+/).filter(w=>w.length>2);
+  const bigrams=[];
+  const cjkChunks=t.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+/g)||[];
+  cjkChunks.forEach(chunk=>{for(let i=0;i<chunk.length-1;i++)bigrams.push(chunk.slice(i,i+2));});
+  return [...words,...bigrams];
+}
+
+// Search tpo_log sections (agent replies only) for relevance to query, return top matches within budget.
+const PEER_CTX_BUDGET=2000; // ~500 tokens
+function getRelevantPeerContext(query){
+  const log=localStorage.getItem(LSL)||'';
+  if(!log.trim())return'';
+  const queryTokens=new Set(tokenize(query));
+  if(!queryTokens.size)return'';
+  // Parse log into sections; keep only agent sections (skip user turns)
+  const sections=log.split(/\n---\n/).map(s=>s.trim()).filter(s=>s&&/^\*\*@\w+\*\*/.test(s));
+  // Score each section
+  const scored=sections.map(s=>{
+    const toks=tokenize(s);
+    const score=toks.reduce((n,t)=>n+(queryTokens.has(t)?1:0),0);
+    return{s,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  // Greedily fill budget with highest-scored sections
+  let chars=0;const chosen=[];
+  for(const{s}of scored){
+    if(chars+s.length>PEER_CTX_BUDGET)break;
+    chosen.push(s);chars+=s.length;
+  }
+  return chosen.join('\n\n');
+}
+
+// Build messages for agent `id`, weaving in peer context.
+// peerCtxTurns: 0=off, -1=auto (log search), N=inject last N rounds verbatim.
+function buildAugmentedMessages(id){
+  if(!state.peerCtxTurns)return state.history[id];
+  const h=state.history[id];
+  const otherIds=['a','b','c','d'].filter(x=>x!==id);
+
+  if(state.peerCtxTurns===-1){
+    // Auto: search log for sections relevant to the current message
+    const currentMsg=h.filter(m=>m.role==='user').at(-1);
+    const currentText=typeof currentMsg?.content==='string'?currentMsg.content:(currentMsg?.content?.[0]?.text||'');
+    const ctx=getRelevantPeerContext(currentText);
+    if(!ctx)return h;
+    // Append relevant excerpts to the last user message only
+    const result=[...h];
+    const lastIdx=result.map(m=>m.role).lastIndexOf('user');
+    if(lastIdx<0)return h;
+    const base=typeof result[lastIdx].content==='string'?result[lastIdx].content:(result[lastIdx].content?.[0]?.text||'');
+    result[lastIdx]={role:'user',content:`${base}\n\n[Relevant excerpts from session log:\n${ctx}]`};
+    return result;
+  }
+
+  // Fixed N turns: weave peer responses into each completed round
+  const totalRounds=h.filter(m=>m.role==='assistant').length;
+  const injectFrom=Math.max(0,totalRounds-state.peerCtxTurns);
+  const result=[];let roundIdx=0;
+  for(let i=0;i<h.length;i++){
+    const msg=h[i];
+    if(msg.role==='user'){
+      const nextIsAsst=h[i+1]?.role==='assistant';
+      if(nextIsAsst&&roundIdx>=injectFrom){
+        let peerCtx='';
+        otherIds.forEach(oid=>{
+          const pa=state.history[oid].filter(m=>m.role==='assistant');
+          if(pa[roundIdx]){const t=typeof pa[roundIdx].content==='string'?pa[roundIdx].content:(pa[roundIdx].content?.[0]?.text||'');if(t)peerCtx+=`\n[@${cfg.agents[oid].label}]: ${t}`;}
+        });
+        if(peerCtx){const base=typeof msg.content==='string'?msg.content:(msg.content?.[0]?.text||'');result.push({role:'user',content:`${base}\n\n[Other agents also responded to this message:${peerCtx}]`});}
+        else result.push(msg);
+      }else result.push(msg);
+      if(nextIsAsst)roundIdx++;
+    }else result.push(msg);
+  }
+  return result;
+}
+
 async function callAgent(id,userText,isDisc=false,attachSnap=[]){
   const agent=cfg.agents[id];
   state.busy[id]=true;setBusy(id,true);
@@ -1005,23 +1104,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
   }
   state.history[id].push({role:'user',content:userContent});
 
-  // Build API payload: inject peers' last-round snippets into current user message.
-  // Injected at payload level only — history stays clean, no token accumulation.
-  let apiMsgs=state.history[id];
-  if(!isDisc && state.lastRoundCtx && Object.keys(state.lastRoundCtx).length>=2){
-    const peers=Object.entries(state.lastRoundCtx)
-      .filter(([pid])=>pid!==id)
-      .map(([pid,snip])=>`[@${cfg.agents[pid].label}]: ${snip}`)
-      .join('\n');
-    if(peers){
-      const pre=`[Other agents last round]\n${peers}\n\n`;
-      const last=apiMsgs.at(-1);
-      const ec=typeof last.content==='string'
-        ?pre+last.content
-        :[{type:'text',text:pre},...(Array.isArray(last.content)?last.content:[{type:'text',text:String(last.content)}])];
-      apiMsgs=[...apiMsgs.slice(0,-1),{role:'user',content:ec}];
-    }
-  }
+  const sysNote=state.logFileName?`\n\n[Full multi-agent session log is auto-saved to: ${state.logFileName}]`:'';
 
   try{
     let reply='',inT=0,outT=0;
@@ -1037,7 +1120,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
           'anthropic-dangerous-direct-browser-access':'true'
         },
         signal:ctrl.signal,
-        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages:apiMsgs,stream:true})
+        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system+sysNote,messages:buildAugmentedMessages(id),stream:true})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
       // Stream SSE response token-by-token
@@ -1066,7 +1149,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
       const ok=cleanKey(cfg.openaiKey);
       if(!ok)throw new Error('OpenAI API key not set — open ⚙ agents');
       const oaiUrl='https://tpo-proxy.rainineyeweb3.workers.dev/v1/chat/completions';
-      const msgs=[{role:'system',content:agent.system},...apiMsgs];
+      const msgs=[{role:'system',content:agent.system+sysNote},...buildAugmentedMessages(id)];
       let res;
       try{
         res=await fetch(oaiUrl,{
@@ -1387,10 +1470,12 @@ function closeExport(){document.getElementById('export-modal').classList.remove(
 
 function switchIOTab(tab){
   document.querySelectorAll('#export-modal .keys-tab').forEach((el,i)=>{
-    el.classList.toggle('active',['export','import'][i]===tab);
+    el.classList.toggle('active',['export','import','sync'][i]===tab);
   });
-  document.getElementById('iotab-export').style.display = tab==='export'?'block':'none';
-  document.getElementById('iotab-import').style.display = tab==='import'?'block':'none';
+  document.getElementById('iotab-export').style.display=tab==='export'?'block':'none';
+  document.getElementById('iotab-import').style.display=tab==='import'?'block':'none';
+  document.getElementById('iotab-sync').style.display=tab==='sync'?'block':'none';
+  if(tab==='sync'){updateSyncUI();if(state.logFileHandle)requestLogPermIfNeeded().then(ok=>{if(ok)addSysMsg(`log file re-authorized: ${state.logFileName}`);});}
 }
 
 function doExport(){
@@ -1467,9 +1552,10 @@ function applyImport(){
 // ── PERSISTENCE ───────────────────────────────────
 const LSC='tpo_cfg',LSS='tpo_state',LSL='tpo_log';
 function persistCfg(){try{localStorage.setItem(LSC,JSON.stringify({anthropicKey:cfg.anthropicKey,openaiKey:cfg.openaiKey,agents:cfg.agents}));}catch(e){}}
-function persistState(){try{localStorage.setItem(LSS,JSON.stringify({history:state.history,totalCost:state.totalCost,at:new Date().toISOString()}));}catch(e){}}
+function persistState(){try{localStorage.setItem(LSS,JSON.stringify({history:state.history,totalCost:state.totalCost,peerCtxTurns:state.peerCtxTurns,at:new Date().toISOString()}));}catch(e){}}
 function logAppend(role,label,model,text){
   try{const p=localStorage.getItem(LSL)||'';const s=new Date().toISOString();const h=role==='user'?`\n---\n**you** · ${s}\n`:`\n---\n**@${label}** (${model}) · ${s}\n`;localStorage.setItem(LSL,p+h+text+'\n');}catch(e){}
+  syncLogFile();
 }
 function exportMdSilent(){
   // Beforeunload silent export (no name prompt, uses timestamp)
@@ -1477,6 +1563,83 @@ function exportMdSilent(){
   const date=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
   const blob=new Blob([`# tpo session\nexported: ${new Date().toLocaleString()}\ncost: $${state.totalCost.toFixed(4)}\n\n`+log],{type:'text/markdown'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tpo_auto_${date}.md`;a.click();URL.revokeObjectURL(a.href);
+}
+
+// ── LOG FILE SYNC (File System Access API) ────────
+function tpoIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('tpo',1);r.onupgradeneeded=e=>e.target.result.createObjectStore('kv');r.onsuccess=e=>res(e.target.result);r.onerror=rej;});}
+async function saveHandleToIDB(h){try{const db=await tpoIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(h,'logHandle');}catch(e){}}
+async function loadHandleFromIDB(){try{const db=await tpoIDB();return new Promise((res,rej)=>{const tx=db.transaction('kv','readonly');const r=tx.objectStore('kv').get('logHandle');r.onsuccess=e=>res(e.target.result||null);r.onerror=rej;});}catch(e){return null;}}
+async function clearHandleFromIDB(){try{const db=await tpoIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete('logHandle');}catch(e){}}
+
+async function syncLogFile(){
+  if(!state.logFileHandle)return;
+  try{
+    // Silently check permission; skip if not granted (avoid user gesture requirement in background)
+    const perm=await state.logFileHandle.queryPermission({mode:'readwrite'});
+    if(perm!=='granted')return;
+    const log=localStorage.getItem(LSL)||'';
+    const content=`# tpo session\nsaved: ${new Date().toLocaleString()}\ncost: $${state.totalCost.toFixed(4)}\n\n`+log;
+    const w=await state.logFileHandle.createWritable();
+    await w.write(content);
+    await w.close();
+  }catch(e){console.warn('syncLogFile:',e);}
+}
+
+async function bindLogFile(){
+  if(!('showSaveFilePicker' in window)){addSysMsg('File System Access API not supported — try Chrome or Edge.');return;}
+  try{
+    const h=await window.showSaveFilePicker({suggestedName:'tpo-session.md',types:[{description:'Markdown',accept:{'text/markdown':['.md']}}]});
+    state.logFileHandle=h;state.logFileName=h.name;
+    await saveHandleToIDB(h);
+    updateSyncUI();
+    await syncLogFile();
+    addSysMsg(`log bound → ${h.name} — will auto-sync after each response`);
+  }catch(e){if(e.name!=='AbortError')addSysMsg(`bind failed: ${e.message}`);}
+}
+
+async function clearLogFile(){
+  state.logFileHandle=null;state.logFileName='';
+  await clearHandleFromIDB();
+  updateSyncUI();
+  addSysMsg('log file unbound');
+}
+
+async function restoreLogHandle(){
+  const h=await loadHandleFromIDB();
+  if(!h)return;
+  try{
+    const perm=await h.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){state.logFileHandle=h;state.logFileName=h.name;updateSyncUI();}
+    else{
+      // Store handle but wait for user gesture to re-request permission
+      state.logFileHandle=h;state.logFileName=h.name;
+      updateSyncUI();
+    }
+  }catch(e){}
+}
+
+async function requestLogPermIfNeeded(){
+  if(!state.logFileHandle)return false;
+  try{
+    const perm=await state.logFileHandle.queryPermission({mode:'readwrite'});
+    if(perm==='granted')return true;
+    const req=await state.logFileHandle.requestPermission({mode:'readwrite'});
+    return req==='granted';
+  }catch(e){return false;}
+}
+
+function updateSyncUI(){
+  const fn=document.getElementById('sync-filename');if(fn)fn.textContent=state.logFileName||'—';
+  const clr=document.getElementById('sync-clear-btn');if(clr)clr.style.display=state.logFileName?'inline-block':'none';
+  const inp=document.getElementById('sync-ctx-turns');if(inp)inp.value=state.peerCtxTurns;
+  updateCtxIndicator();
+}
+function updateCtxIndicator(){
+  const el=document.getElementById('ctx-indicator');
+  if(!el)return;
+  if(state.peerCtxTurns===-1){el.textContent='ctx:auto';el.style.display='inline';}
+  else if(state.peerCtxTurns>0){el.textContent=`ctx:${state.peerCtxTurns}`;el.style.display='inline';}
+  else{el.style.display='none';}
 }
 
 function restoreSession(){
@@ -1487,7 +1650,9 @@ function restoreSession(){
       const has=['a','b','c','d'].some(id=>(s.history[id]||[]).length>0);
       if(has){['a','b','c','d'].forEach(id=>{state.history[id]=s.history[id]||[];});state.totalCost=s.totalCost||0;updateCost();rebuildThread();}
     }
+    if(s?.peerCtxTurns){state.peerCtxTurns=s.peerCtxTurns;}
   }catch(e){}
+  restoreLogHandle();
 }
 function rebuildThread(){
   removeEmpty();
@@ -1501,7 +1666,7 @@ function rebuildThread(){
 }
 function clearThread(){
   ['a','b','c','d'].forEach(id=>{state.history[id]=[];});state.totalCost=0;updateCost();
-  state.filterAgent=null;state.attachments=[];renderAttachStrip();state.lastRoundCtx=null;
+  state.filterAgent=null;state.attachments=[];renderAttachStrip();
   document.getElementById('thread').classList.remove('filter-on');
   document.getElementById('btn-discuss').disabled=true;
   document.getElementById('filter-hint').textContent='';
@@ -1573,9 +1738,6 @@ function clearKey(inputId){
   el.value='';el.type='password';
   const clr=document.getElementById('clr-'+inputId);if(clr)clr.style.display='none';
   const vis=document.getElementById('vis-'+inputId);if(vis){vis.innerHTML=EYE_OPEN;vis.style.display='none';}
-  if(inputId==='cfg-anth')cfg.anthropicKey='';
-  else if(inputId==='cfg-oai')cfg.openaiKey='';
-  persistCfg();
 }
 function clearApiKeys(){
   document.getElementById('cfg-anth').value='';
