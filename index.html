@@ -1090,6 +1090,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
     bodyEl.innerHTML=fmtBody(reply);
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
+    injectRetryBtn(bodyEl.closest('.msg'),id);
   } catch(err){
     if(err.name==='AbortError'){
       bodyEl.innerHTML=`<span style="color:var(--text-dim);font-family:var(--mono);font-size:11px">stopped</span>`;
