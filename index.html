@@ -95,8 +95,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .empty-hint span{color:var(--text);font-weight:500;}
 .ea-hd{display:flex;align-items:center;gap:6px;}
 .ea-tag{font-size:12px;font-weight:600;letter-spacing:.06em;}
-.ea-model{font-size:10px;color:var(--dim);letter-spacing:.03em;}
-.ea-desc{font-size:11px;color:var(--dim);line-height:1.5;font-family:var(--sans);font-weight:300;}
+.ea-model{font-size:9px;color:var(--dim);letter-spacing:.03em;}
+.ea-desc{font-size:11px;color:#747474;line-height:1.5;font-family:var(--sans);font-weight:300;}
 
 /* Messages */
 .msg{display:grid;grid-template-columns:50px minmax(0,1fr);border-bottom:1px solid var(--line);animation:fi .16s ease;background:rgba(8,8,8,.55);transition:opacity .2s;}
@@ -447,8 +447,7 @@ textarea::placeholder{color:var(--dim2);}
       <div class="ea"><div class="ea-hd"><span id="pe-c"></span><span class="ea-tag" style="color:var(--c-hue)">@codex</span></div><div class="ea-model" id="em-c">o3</div><div class="ea-desc">OpenAI · cross-check · reasoning</div></div>
     </div>
     <div class="empty-hint">
-      <div class="hint-routing">no @mention = all reply &nbsp;·&nbsp; click 🐧 to filter</div>
-      <div style="margin-top:3px;"><span>⟳ discuss</span> = debate mode</div>
+      <div style="">click 🐧 to filter &nbsp;·&nbsp; <span>⟳ discuss</span> = debate mode</div>
     </div>
   </div>
 </div>
@@ -535,11 +534,8 @@ textarea::placeholder{color:var(--dim2);}
     <div class="panel-body">
       <div class="cfg-sec">
         <div class="cfg-lbl">API KEYS</div>
-        <div class="field"><label>Anthropic Key</label><input type="password" id="cfg-anth" placeholder="sk-ant-..."/></div>
-        <div class="field"><label>OpenAI Key</label><input type="password" id="cfg-oai" placeholder="sk-..."/></div>
-        <div style="margin-bottom:4px;">
-          <button class="btn-cancel" style="font-size:9px;color:#e05555;border-color:rgba(224,85,85,.25);" onclick="clearApiKeys()">✕ clear all keys</button>
-        </div>
+        <div class="field"><label>Anthropic Key</label><div style="position:relative;"><input type="password" id="cfg-anth" placeholder="sk-ant-..." style="padding-right:48px;" oninput="onKeyInput(this)"/><button id="vis-cfg-anth" onclick="toggleKeyVis('cfg-anth')" title="Show / hide" style="position:absolute;right:26px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim2);cursor:pointer;padding:0;line-height:1;display:none;align-items:center;" onmouseover="this.style.color='var(--dim)'" onmouseout="this.style.color='var(--dim2)'"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5C2 3.2 3.6 2 5.5 2C7.4 2 9 3.2 10 5.5C9 7.8 7.4 9 5.5 9C3.6 9 2 7.8 1 5.5Z" stroke="currentColor" stroke-width="1.1"/><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor"/></svg></button><button id="clr-cfg-anth" onclick="clearKey('cfg-anth')" title="Clear" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim2);cursor:pointer;font-size:10px;padding:0;line-height:1;display:none;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim2)'">✕</button></div></div>
+        <div class="field"><label>OpenAI Key</label><div style="position:relative;"><input type="password" id="cfg-oai" placeholder="sk-..." style="padding-right:48px;" oninput="onKeyInput(this)"/><button id="vis-cfg-oai" onclick="toggleKeyVis('cfg-oai')" title="Show / hide" style="position:absolute;right:26px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim2);cursor:pointer;padding:0;line-height:1;display:none;align-items:center;" onmouseover="this.style.color='var(--dim)'" onmouseout="this.style.color='var(--dim2)'"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5C2 3.2 3.6 2 5.5 2C7.4 2 9 3.2 10 5.5C9 7.8 7.4 9 5.5 9C3.6 9 2 7.8 1 5.5Z" stroke="currentColor" stroke-width="1.1"/><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor"/></svg></button><button id="clr-cfg-oai" onclick="clearKey('cfg-oai')" title="Clear" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim2);cursor:pointer;font-size:10px;padding:0;line-height:1;display:none;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim2)'">✕</button></div></div>
         <div style="display:flex;gap:7px;margin-top:4px;margin-bottom:2px;align-items:stretch;">
           <button class="btn-cancel" style="flex:1;font-size:9px;white-space:normal;line-height:1.3;" onclick="exportKeyFile()">↓ save as encrypted file</button>
           <label style="flex:1;cursor:pointer;display:flex;">
@@ -1440,8 +1436,14 @@ function clearThread(){
 
 // ── CONFIG PANEL ──────────────────────────────────
 function openPanel(){
-  document.getElementById('cfg-anth').value=cfg.anthropicKey;
-  document.getElementById('cfg-oai').value=cfg.openaiKey;
+  ['cfg-anth','cfg-oai'].forEach(id=>{
+    const inp=document.getElementById(id);
+    inp.value=id==='cfg-anth'?cfg.anthropicKey:cfg.openaiKey;
+    inp.type='password';
+    const has=!!inp.value;
+    const vis=document.getElementById('vis-'+id);if(vis){vis.innerHTML=EYE_OPEN;vis.style.display=has?'flex':'none';}
+    const clr=document.getElementById('clr-'+id);if(clr)clr.style.display=has?'block':'none';
+  });
   ['a','b','c','d'].forEach(id=>{document.getElementById(`cfg-${id}-m`).value=cfg.agents[id].model;document.getElementById(`cfg-${id}-l`).value=cfg.agents[id].label;document.getElementById(`cfg-${id}-s`).value=cfg.agents[id].system;});
   document.getElementById('overlay').classList.add('open');
 }
@@ -1465,6 +1467,29 @@ document.getElementById('export-name').addEventListener('keydown',e=>{if(e.key==
 // ── KEY FILE (panel-integrated) ───────────────────
 let loadedKeyFileData=null;
 
+const EYE_OPEN='<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5C2 3.2 3.6 2 5.5 2C7.4 2 9 3.2 10 5.5C9 7.8 7.4 9 5.5 9C3.6 9 2 7.8 1 5.5Z" stroke="currentColor" stroke-width="1.1"/><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor"/></svg>';
+const EYE_SHUT='<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5C2 3.2 3.6 2 5.5 2C7.4 2 9 3.2 10 5.5C9 7.8 7.4 9 5.5 9C3.6 9 2 7.8 1 5.5Z" stroke="currentColor" stroke-width="1.1" opacity=".3"/><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor" opacity=".3"/><path d="M2 2L9 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+function onKeyInput(el){
+  const has=!!el.value;
+  const clr=document.getElementById('clr-'+el.id);if(clr)clr.style.display=has?'block':'none';
+  const vis=document.getElementById('vis-'+el.id);if(vis)vis.style.display=has?'flex':'none';
+}
+function toggleKeyVis(inputId){
+  const el=document.getElementById(inputId);
+  const btn=document.getElementById('vis-'+inputId);
+  const reveal=el.type==='password';
+  el.type=reveal?'text':'password';
+  if(btn)btn.innerHTML=reveal?EYE_SHUT:EYE_OPEN;
+}
+function clearKey(inputId){
+  const el=document.getElementById(inputId);
+  el.value='';el.type='password';
+  const clr=document.getElementById('clr-'+inputId);if(clr)clr.style.display='none';
+  const vis=document.getElementById('vis-'+inputId);if(vis){vis.innerHTML=EYE_OPEN;vis.style.display='none';}
+  if(inputId==='cfg-anth')cfg.anthropicKey='';
+  else if(inputId==='cfg-oai')cfg.openaiKey='';
+  persistCfg();
+}
 function clearApiKeys(){
   document.getElementById('cfg-anth').value='';
   document.getElementById('cfg-oai').value='';
@@ -1472,6 +1497,7 @@ function clearApiKeys(){
   persistCfg();
   setPanelKeyStatus('Keys cleared','ok');
 }
+function exportKeyFile(){
   const anth=document.getElementById('cfg-anth').value.trim();
   const oai=document.getElementById('cfg-oai').value.trim();
   if(!anth&&!oai){setPanelKeyStatus('Enter at least one key first','err');return;}
