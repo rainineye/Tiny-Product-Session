@@ -1361,7 +1361,8 @@ function injectRetryBtn(row,id){
   const userText=typeof lastUserMsg?.content==='string'?lastUserMsg.content:(lastUserMsg?.content?.[0]?.text||'');
   const actions=row.querySelector('.msg-actions');
   if(actions&&userText){
-    actions.innerHTML=`<button class="btn-quote" onclick="quoteReply('${id}')">❝ quote</button><button class="btn-retry" onclick="retryAgent('${id}',${JSON.stringify(userText)})">↺ retry</button>`;
+    row.dataset.retryText=userText;
+    actions.innerHTML=`<button class="btn-quote" onclick="quoteReply('${id}')">❝ quote</button><button class="btn-retry" onclick="retryAgent('${id}',this.closest('.msg').dataset.retryText)">↺ retry</button>`;
   }
 }
 
@@ -1674,14 +1675,17 @@ function clearThread(){
   try{localStorage.removeItem(LSS);localStorage.removeItem(LSL);}catch(e){}
   const t=document.getElementById('thread');t.innerHTML='';
   const empty=document.createElement('div');empty.className='empty';empty.id='empty';
+  const DESC={a:'Strategy · architecture · decisions',b:'Code · review · implementation',c:'OpenAI · cross-check · reasoning',d:'Deep GPT reasoning · first principles'};
   empty.innerHTML=`<div class="empty-agents">
-    ${['a','d','b','c'].map((id,i)=>`<div class="ea">
+    ${['a','d','b','c'].map(id=>`<div class="ea">
       <div class="ea-hd"><span id="pe-${id}"></span><span class="ea-tag" style="color:var(--${id}-hue)">@${cfg.agents[id].label}</span></div>
-      <div class="ea-model">${cfg.agents[id].model}</div>
-      <div class="ea-desc">${{a:'Strategy · architecture',b:'Code · implementation',c:'OpenAI · cross-check',d:'Deep GPT reasoning'}[id]}</div>
+      <div class="ea-model" id="em-${id}">${cfg.agents[id].model}</div>
+      <div class="ea-desc">${DESC[id]}</div>
     </div>`).join('')}
   </div>
-  <div class="empty-hint"><span>@brain</span> + <span>@thinker</span> are your thinkers &nbsp;·&nbsp; <span>⟳ discuss</span> = make them debate &nbsp;·&nbsp; <span>@coder</span> + <span>@codex</span> implement &amp; cross-check</div>`;
+  <div class="empty-hint">
+    <div>click 🐧 to filter &nbsp;·&nbsp; <span>⟳ discuss</span> = debate mode</div>
+  </div>`;
   t.appendChild(empty);
   ['a','b','c','d'].forEach(id=>{const e=document.getElementById(`pe-${id}`);if(e)e.innerHTML=pxSVG(id,3);});
 }
