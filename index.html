@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#080808">
 <title>Tiny Product Office</title>
-<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;1,300&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&family=Noto+Serif+SC:wght@300;400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -135,7 +135,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .msg-body blockquote.agent-quote .quote-from{font-size:10px;font-family:var(--mono);color:var(--a-hue);margin-bottom:3px;font-weight:600;}
 .msg-body blockquote.agent-quote .quote-text{font-size:12px;color:#aaa;font-style:italic;}
 
-.msg-body{font-size:13px;line-height:1.75;color:var(--text);word-break:break-word;overflow-wrap:anywhere;font-family:var(--sans);font-weight:300;}
+.msg-body{font-size:14px;line-height:1.85;color:var(--text);word-break:break-word;overflow-wrap:anywhere;font-family:'Source Serif 4','Noto Serif SC','Noto Serif',Georgia,serif;font-weight:300;}
 .msg-body p{margin:0 0 10px;}
 .msg-body p:last-child{margin-bottom:0;}
 .msg-body h1{font-size:16px;font-weight:600;color:var(--text);margin:16px 0 8px;font-family:var(--mono);letter-spacing:.04em;border-bottom:1px solid var(--line2);padding-bottom:5px;}
@@ -147,7 +147,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 .msg-body ol{margin:6px 0 10px 18px;padding:0;}
 .msg-body li{margin-bottom:3px;line-height:1.65;}
 .msg-body li>ul,.msg-body li>ol{margin-top:3px;margin-bottom:3px;}
-.msg-body blockquote{border-left:2px solid var(--line2);margin:8px 0;padding:4px 12px;color:var(--dim);font-style:italic;}
+.msg-body blockquote{border-left:2px solid rgba(255,255,255,.25);margin:8px 0;padding:4px 12px;color:#b8b8b8;font-style:italic;background:rgba(255,255,255,.025);border-radius:0 2px 2px 0;}
 .msg-body hr{border:none;border-top:1px solid var(--line2);margin:12px 0;}
 .msg-body code{font-family:var(--mono);font-size:10.5px;background:var(--bg3);padding:1px 5px;border-radius:2px;color:#c5cdd9;border:1px solid var(--line2);}
 .msg-body pre{background:var(--bg3);border:1px solid var(--line2);border-radius:3px;padding:11px 13px;margin:8px 0;overflow-x:auto;position:relative;}
@@ -200,8 +200,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--m
 textarea{width:100%;background:none;border:none;outline:none;font-family:var(--sans);font-size:13px;font-weight:300;color:var(--text);resize:none;line-height:1.6;padding:10px 12px 36px 12px;min-height:110px;max-height:320px;}
 textarea::placeholder{color:var(--dim2);}
 /* Attach button inside textarea, bottom-left */
+.inp-tools{position:absolute;bottom:7px;left:9px;display:flex;align-items:center;gap:2px;}
 .attach-btn{
-  position:absolute;bottom:8px;left:9px;
   height:20px;padding:0 7px 0 5px;border-radius:2px;
   background:none;border:none;color:var(--dim);
   cursor:pointer;display:flex;align-items:center;gap:5px;
@@ -209,6 +209,19 @@ textarea::placeholder{color:var(--dim2);}
 }
 .attach-btn:hover{color:var(--text);}
 .attach-btn.has-files{color:var(--b-hue);}
+.workdir-btn{
+  height:20px;padding:0 6px 0 5px;border-radius:2px;
+  background:none;border:none;color:var(--dim2);
+  cursor:pointer;display:flex;align-items:center;gap:4px;
+  font-size:13px;transition:all .15s;line-height:1;
+}
+.workdir-btn:hover{color:var(--text);}
+.workdir-btn.bound{color:var(--b-hue);}
+.workdir-btn-path{font-size:9px;letter-spacing:.04em;font-family:var(--mono);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+/* Workdir popover */
+.workdir-popover{position:absolute;bottom:calc(100% + 6px);left:0;background:var(--bg3);border:1px solid var(--line2);border-radius:3px;padding:4px 0;z-index:100;min-width:150px;box-shadow:0 4px 16px rgba(0,0,0,.5);}
+.workdir-popover button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--dim);font-family:var(--mono);font-size:10px;padding:5px 12px;cursor:pointer;letter-spacing:.03em;}
+.workdir-popover button:hover{color:var(--text);background:var(--bg4);}
 /* Send button inside textarea, bottom-right */
 .send-btn{
   position:absolute;bottom:8px;right:9px;
@@ -371,6 +384,8 @@ textarea::placeholder{color:var(--dim2);}
 
   /* Attach icon bigger for tap */
   .attach-btn{font-size:18px;}
+  .workdir-btn{font-size:18px;}
+  .workdir-btn-path{display:none;}
 
   /* 5. Input zone */
   .inputzone{padding:6px 10px 8px;}
@@ -477,7 +492,14 @@ textarea::placeholder{color:var(--dim2);}
       <div class="mention-dropdown" id="mention-dropdown"></div>
       <textarea id="inp" placeholder="message agents... @brain @thinker @coder @codex or send to all" rows="1"
         oninput="onInput(this)" onkeydown="onKey(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)"></textarea>
-      <button class="attach-btn" id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach file"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M11.5 6L6.5 11C5.1 12.4 2.9 12.4 1.5 11C0.1 9.6 0.1 7.4 1.5 6L6 1.5C6.9 0.6 8.3 0.6 9.2 1.5C10.1 2.4 10.1 3.8 9.2 4.7L5 8.9C4.6 9.3 3.9 9.3 3.5 8.9C3.1 8.5 3.1 7.8 3.5 7.4L7 3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:9px;letter-spacing:.04em;font-family:var(--mono);white-space:nowrap;">Attach File</span></button>
+      <div class="inp-tools">
+        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach file"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M11.5 6L6.5 11C5.1 12.4 2.9 12.4 1.5 11C0.1 9.6 0.1 7.4 1.5 6L6 1.5C6.9 0.6 8.3 0.6 9.2 1.5C10.1 2.4 10.1 3.8 9.2 4.7L5 8.9C4.6 9.3 3.9 9.3 3.5 8.9C3.1 8.5 3.1 7.8 3.5 7.4L7 3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:9px;letter-spacing:.04em;font-family:var(--mono);white-space:nowrap;">Attach File</span></button>
+        <button class="workdir-btn" id="workdir-btn" onclick="onWorkdirClick(event)" title="@coder working directory"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M1.5 3.5C1.5 2.9 2 2.5 2.5 2.5H5L6.5 4H10.5C11.1 4 11.5 4.4 11.5 5V10C11.5 10.6 11.1 11 10.5 11H2.5C2 11 1.5 10.6 1.5 10V3.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="workdir-btn-path" id="workdir-btn-path"></span></button>
+        <div class="workdir-popover" id="workdir-popover" style="display:none;">
+          <button onclick="bindCoderDir();closeWorkdirPopover()">⟲ change folder</button>
+          <button onclick="clearCoderDir();closeWorkdirPopover()" style="color:#e05555;">✕ clear</button>
+        </div>
+      </div>
       <button class="send-btn" id="send-btn" onclick="doSend()" disabled title="Send (Enter)">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none;">
           <path d="M10 2V6C10 7.1 9.1 8 8 8H2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -607,6 +629,7 @@ textarea::placeholder{color:var(--dim2);}
           <div class="field"><label>Label</label><input type="text" id="cfg-b-l" value="coder"/></div>
         </div>
         <div class="field"><label>System Prompt</label><textarea id="cfg-b-s" rows="3">You are a senior software engineer. Write clean, production-ready code. Be concrete and implementation-focused. Prefer code over explanation.</textarea></div>
+
       </div>
       <div class="cfg-sec">
         <div class="cfg-lbl" style="color:var(--c-hue)"><span id="pc-c"></span>@codex — openai</div>
@@ -698,6 +721,8 @@ const state={
   logFileHandle:null,
   logFileName:'',
   peerCtxTurns:0,
+  coderDirHandle:null,
+  coderDirName:'',
 };
 
 const PRICES={'claude-opus-4-6':{i:15,o:75},'claude-sonnet-4-6':{i:3,o:15},'gpt-5.4':{i:2.5,o:15},'gpt-5.4-mini':{i:0.75,o:4.5},'o3':{i:2,o:8},'o4-mini':{i:1.1,o:4.4},'gpt-4o':{i:2.5,o:10},'codex-mini-latest':{i:1.5,o:6}};
@@ -1105,6 +1130,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
   state.history[id].push({role:'user',content:userContent});
 
   const sysNote=state.logFileName?`\n\n[Full multi-agent session log is auto-saved to: ${state.logFileName}]`:'';
+  const coderNote=(id==='b'&&state.coderDirName)?`\n\n[Working directory: ${state.coderDirName}. For code you write as complete file contents, put // FILE: relative/path/to/file.ext as the very first line inside each code block (e.g. \`\`\`ts\n// FILE: src/App.tsx\ncode here\`\`\`). These will be auto-saved to the working directory.]`:'';
 
   try{
     let reply='',inT=0,outT=0;
@@ -1120,7 +1146,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
           'anthropic-dangerous-direct-browser-access':'true'
         },
         signal:ctrl.signal,
-        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system+sysNote,messages:buildAugmentedMessages(id),stream:true})
+        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system+sysNote+coderNote,messages:buildAugmentedMessages(id),stream:true})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
       // Stream SSE response token-by-token
@@ -1149,7 +1175,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
       const ok=cleanKey(cfg.openaiKey);
       if(!ok)throw new Error('OpenAI API key not set — open ⚙ agents');
       const oaiUrl='https://tpo-proxy.rainineyeweb3.workers.dev/v1/chat/completions';
-      const msgs=[{role:'system',content:agent.system+sysNote},...buildAugmentedMessages(id)];
+      const msgs=[{role:'system',content:agent.system+sysNote+coderNote},...buildAugmentedMessages(id)];
       let res;
       try{
         res=await fetch(oaiUrl,{
@@ -1173,6 +1199,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
     bodyEl.innerHTML=fmtBody(reply);
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
+    if(id==='b'&&state.coderDirHandle&&reply){const _par=bodyEl.parentElement;saveCodeFiles(reply,state.coderDirHandle).then(n=>{if(n>0){const ft=document.createElement('div');ft.className='cost-tag';ft.style.cssText='color:var(--b-hue)';ft.textContent=`💾 ${n} file${n>1?'s':''} saved → ${state.coderDirName}`;_par.appendChild(ft);}});}
     injectRetryBtn(bodyEl.closest('.msg'),id);
   } catch(err){
     if(err.name==='AbortError'){
@@ -1571,6 +1598,56 @@ function tpoIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('tpo',1)
 async function saveHandleToIDB(h){try{const db=await tpoIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(h,'logHandle');}catch(e){}}
 async function loadHandleFromIDB(){try{const db=await tpoIDB();return new Promise((res,rej)=>{const tx=db.transaction('kv','readonly');const r=tx.objectStore('kv').get('logHandle');r.onsuccess=e=>res(e.target.result||null);r.onerror=rej;});}catch(e){return null;}}
 async function clearHandleFromIDB(){try{const db=await tpoIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete('logHandle');}catch(e){}}
+async function saveCoderDirToIDB(h){try{const db=await tpoIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(h,'coderDir');}catch(e){}}
+async function loadCoderDirFromIDB(){try{const db=await tpoIDB();return new Promise((res,rej)=>{const tx=db.transaction('kv','readonly');const r=tx.objectStore('kv').get('coderDir');r.onsuccess=e=>res(e.target.result||null);r.onerror=rej;});}catch(e){return null;}}
+async function clearCoderDirFromIDB(){try{const db=await tpoIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete('coderDir');}catch(e){}}
+
+async function bindCoderDir(){
+  try{
+    const h=await showDirectoryPicker({mode:'readwrite'});
+    state.coderDirHandle=h;state.coderDirName=h.name;
+    await saveCoderDirToIDB(h);updateCoderDirUI();
+  }catch(e){if(e.name!=='AbortError')console.error(e);}
+}
+async function clearCoderDir(){
+  state.coderDirHandle=null;state.coderDirName='';
+  await clearCoderDirFromIDB();updateCoderDirUI();
+}
+function updateCoderDirUI(){
+  const btn=document.getElementById('workdir-btn');
+  const path=document.getElementById('workdir-btn-path');
+  if(btn) btn.classList.toggle('bound',!!state.coderDirName);
+  if(path) path.textContent=state.coderDirName||'';
+}
+function onWorkdirClick(e){
+  e.stopPropagation();
+  if(!state.coderDirName){bindCoderDir();return;}
+  const pop=document.getElementById('workdir-popover');
+  if(!pop) return;
+  const showing=pop.style.display!=='none';
+  pop.style.display=showing?'none':'block';
+  if(!showing) setTimeout(()=>document.addEventListener('click',closeWorkdirPopover,{once:true}),0);
+}
+function closeWorkdirPopover(){
+  const pop=document.getElementById('workdir-popover');if(pop)pop.style.display='none';
+}
+async function getNestedFileHandle(dirHandle,relPath){
+  const parts=relPath.replace(/^\//,'').split('/').filter(Boolean);
+  let dir=dirHandle;
+  for(let i=0;i<parts.length-1;i++) dir=await dir.getDirectoryHandle(parts[i],{create:true});
+  return dir.getFileHandle(parts[parts.length-1],{create:true});
+}
+async function saveCodeFiles(reply,dirHandle){
+  const pat=/```[\w]*\n(\/\/ FILE:|# FILE:|\/\* FILE:)\s*(\S+)[^\n]*\n([\s\S]*?)```/g;
+  let m;let count=0;
+  while((m=pat.exec(reply))!==null){
+    try{
+      const fh=await getNestedFileHandle(dirHandle,m[2]);
+      const w=await fh.createWritable();await w.write(m[3]);await w.close();count++;
+    }catch(e){console.warn('saveCodeFiles:',m[2],e);}
+  }
+  return count;
+}
 
 async function syncLogFile(){
   if(!state.logFileHandle)return;
@@ -1654,6 +1731,7 @@ function restoreSession(){
     if(s?.peerCtxTurns){state.peerCtxTurns=s.peerCtxTurns;}
   }catch(e){}
   restoreLogHandle();
+  loadCoderDirFromIDB().then(h=>{if(h){state.coderDirHandle=h;state.coderDirName=h.name;updateCoderDirUI();}});
 }
 function rebuildThread(){
   removeEmpty();
