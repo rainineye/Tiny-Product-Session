@@ -1287,11 +1287,30 @@ async function discussCall(id, peerContent){
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         signal:ctrl.signal,
-        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages})
+        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system,messages,stream:true})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
-      const data=await res.json();
-      reply=data.content?.[0]?.text||'';inT=data.usage?.input_tokens||0;outT=data.usage?.output_tokens||0;
+      const reader=res.body.getReader();const dec=new TextDecoder();
+      let buf='',lastRenderTs=0;
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop();
+        for(const line of lines){
+          if(!line.startsWith('data:'))continue;
+          const raw=line.slice(5).trim();
+          try{
+            const evt=JSON.parse(raw);
+            if(evt.type==='content_block_delta'&&evt.delta?.type==='text_delta'){
+              reply+=evt.delta.text;
+              const now=Date.now();
+              if(now-lastRenderTs>80){bodyEl.innerHTML=fmtBody(reply);scrollBot();lastRenderTs=now;}
+            }
+            if(evt.type==='message_start'&&evt.message?.usage)inT=evt.message.usage.input_tokens;
+            if(evt.type==='message_delta'&&evt.usage)outT=evt.usage.output_tokens;
+          }catch(e){}
+        }
+      }
     } else {
       const ok=cleanKey(cfg.openaiKey);
       if(!ok)throw new Error('OpenAI API key not set');
@@ -1313,9 +1332,10 @@ async function discussCall(id, peerContent){
     state.totalCost+=cost;updateCost();
     // Save discuss reply to history as assistant turn — peer injection stays OUT
     state.history[id].push({role:'assistant',content:reply});
-    bodyEl.innerHTML=fmtBody(reply);
+    bodyEl.innerHTML=fmtBody(reply)||'<span style="color:var(--dim);font-size:11px;font-family:var(--mono)">(empty response)</span>';
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
+    injectRetryBtn(bodyEl.closest('.msg'),id);
   } catch(err){
     if(err.name==='AbortError'){
       bodyEl.innerHTML=`<span style="color:var(--text-dim);font-family:var(--mono);font-size:11px">stopped</span>`;
