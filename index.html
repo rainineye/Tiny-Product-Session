@@ -1130,7 +1130,12 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
   state.history[id].push({role:'user',content:userContent});
 
   const sysNote=state.logFileName?`\n\n[Full multi-agent session log is auto-saved to: ${state.logFileName}]`:'';
-  const coderNote=(id==='b'&&state.coderDirName)?`\n\n[Working directory: ${state.coderDirName}. For code you write as complete file contents, put // FILE: relative/path/to/file.ext as the very first line inside each code block (e.g. \`\`\`ts\n// FILE: src/App.tsx\ncode here\`\`\`). These will be auto-saved to the working directory.]`:'';
+  const coderNote=((id==='b'||id==='c')&&state.coderDirName)?`\n\n[Working directory: ${state.coderDirName}. For code you write as complete file contents, put // FILE: relative/path/to/file.ext as the very first line inside each code block (e.g. \`\`\`ts\n// FILE: src/App.tsx\ncode here\`\`\`). These will be auto-saved to the working directory.]`:'';
+  let workdirCtx='';
+  if(id==='c'&&state.coderDirHandle){
+    const files=await readWorkdirFiles(state.coderDirHandle);
+    if(files.length)workdirCtx=`\n\n[Current files in ${state.coderDirName}:\n\n${files.map(f=>`FILE: ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}]`;
+  }
 
   try{
     let reply='',inT=0,outT=0;
@@ -1146,7 +1151,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
           'anthropic-dangerous-direct-browser-access':'true'
         },
         signal:ctrl.signal,
-        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system+sysNote+coderNote,messages:buildAugmentedMessages(id),stream:true})
+        body:JSON.stringify({model:agent.model,max_tokens:1024,system:agent.system+sysNote+coderNote+workdirCtx,messages:buildAugmentedMessages(id),stream:true})
       });
       if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
       // Stream SSE response token-by-token
@@ -1175,7 +1180,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
       const ok=cleanKey(cfg.openaiKey);
       if(!ok)throw new Error('OpenAI API key not set — open ⚙ agents');
       const oaiUrl='https://tpo-proxy.rainineyeweb3.workers.dev/v1/chat/completions';
-      const msgs=[{role:'system',content:agent.system+sysNote+coderNote},...buildAugmentedMessages(id)];
+      const msgs=[{role:'system',content:agent.system+sysNote+coderNote+workdirCtx},...buildAugmentedMessages(id)];
       let res;
       try{
         res=await fetch(oaiUrl,{
@@ -1199,7 +1204,7 @@ async function callAgent(id,userText,isDisc=false,attachSnap=[]){
     bodyEl.innerHTML=fmtBody(reply);
     logAppend(id,agent.label,agent.model,reply);
     if(inT>0){const ct=document.createElement('div');ct.className='cost-tag';ct.textContent=`~$${cost.toFixed(4)} · ${inT}↑ ${outT}↓`;bodyEl.parentElement.appendChild(ct);}
-    if(id==='b'&&state.coderDirHandle&&reply){const _par=bodyEl.parentElement;saveCodeFiles(reply,state.coderDirHandle).then(n=>{if(n>0){const ft=document.createElement('div');ft.className='cost-tag';ft.style.cssText='color:var(--b-hue)';ft.textContent=`💾 ${n} file${n>1?'s':''} saved → ${state.coderDirName}`;_par.appendChild(ft);}});}
+    if((id==='b'||id==='c')&&state.coderDirHandle&&reply){const _par=bodyEl.parentElement;saveCodeFiles(reply,state.coderDirHandle).then(n=>{if(n>0){const ft=document.createElement('div');ft.className='cost-tag';ft.style.cssText='color:var(--b-hue)';ft.textContent=`💾 ${n} file${n>1?'s':''} saved → ${state.coderDirName}`;_par.appendChild(ft);}});}
     injectRetryBtn(bodyEl.closest('.msg'),id);
   } catch(err){
     if(err.name==='AbortError'){
@@ -1630,6 +1635,28 @@ function onWorkdirClick(e){
 }
 function closeWorkdirPopover(){
   const pop=document.getElementById('workdir-popover');if(pop)pop.style.display='none';
+}
+const WORKDIR_READ_BUDGET=15000;
+const SKIP_DIRS=new Set(['node_modules','.git','dist','build','.next','.nuxt','__pycache__','.cache','coverage','.vscode']);
+const SKIP_EXTS=new Set(['.png','.jpg','.jpeg','.gif','.ico','.webp','.woff','.woff2','.ttf','.eot','.pdf','.zip','.tar','.gz','.exe','.dll','.so','.bin','.lock','.svg']);
+async function readWorkdirFiles(dirHandle){
+  const files=[];let total=0;
+  async function walk(dh,prefix){
+    try{for await(const[name,entry]of dh.entries()){
+      if(total>=WORKDIR_READ_BUDGET)return;
+      const path=prefix?`${prefix}/${name}`:name;
+      if(entry.kind==='directory'){if(!SKIP_DIRS.has(name))await walk(entry,path);}
+      else{
+        const ext=name.includes('.')?'.'+name.split('.').pop().toLowerCase():'';
+        if(SKIP_EXTS.has(ext))continue;
+        try{const f=await entry.getFile();if(f.size>30000)continue;
+          const txt=await f.text();if(total+txt.length>WORKDIR_READ_BUDGET)continue;
+          files.push({path,content:txt});total+=txt.length;
+        }catch(e){}
+      }
+    }}catch(e){}
+  }
+  await walk(dirHandle,'');return files;
 }
 async function getNestedFileHandle(dirHandle,relPath){
   const parts=relPath.replace(/^\//,'').split('/').filter(Boolean);
